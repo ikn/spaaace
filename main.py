@@ -25,8 +25,8 @@ class Fonts (object):
         font = tuple(font)
         if force_reload or font not in self.fonts:
             fn, size, bold = font
-            self.fonts[font] = pygame.font.Font(conf.FONT_DIR + os.sep + fn,
-                                                int(size), bold = bold)
+            self.fonts[font] = pygame.font.Font(conf.FONT_DIR + fn, int(size),
+                                                bold = bold)
         return self.fonts[font]
 
     def text (self, font, text, colour, shadow = None, width = None, just = 0,
@@ -407,7 +407,7 @@ Only one instance of a sound will be played each frame.
 
     def refresh_display (self, *args):
         """Update the display mode from conf, and notify the backend."""
-        flags = 0
+        flags = conf.FLAGS
         if conf.FULLSCREEN:
             flags |= pygame.FULLSCREEN
             self.res = conf.RES_F
@@ -435,6 +435,6 @@ if __name__ == '__main__':
     restarting = True
     while restarting:
         restarting = False
-        Game(Level).run()
+        Game(Level, 3).run()
 
 pygame.quit()

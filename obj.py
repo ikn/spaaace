@@ -6,13 +6,14 @@ from random import random
 import conf
 
 class Obj:
-    def __init__ (self, level, x, y, vx):
+    def __init__ (self, level, m, x, y, vx, w, h):
         self.level = level
-        b = self.body = pm.Body(500, pm.moment_for_box(500, 50, 50))
+        b = self.body = pm.Body(m, pm.moment_for_box(m, w, h))
         b.position = (x, y)
         b.velocity = (vx, 0)
-        s = self.shape = pm.Poly.create_box(b, (50, 50))
-        s.elasticity = conf.CAR_ELAST
+        s = self.shape = pm.Poly.create_box(b, (w, h))
+        s.elasticity = conf.OBJ_ELAST
+        s.friction = conf.OBJ_FRICTION
         level.space.add(b, s)
 
     def update (self):
@@ -33,11 +34,14 @@ class Car:
         # TODO: have rotation, but every frame we move set inertia towards facing right by an amount proportional to angular distance away
         b.position = (200, y)
         b.velocity = (0, 0)
-        s = self.shape = pm.Poly.create_box(b, (40, 60))
+        s = self.shape = pm.Poly(b, ((25, 0), (13, 35), (8, 35), (-25, 0), (8, -35), (13, -35)))
         s.elasticity = conf.CAR_ELAST
+        s.friction = conf.CAR_FRICTION
         level.space.add(b, s)
 
     def move (self, k, x, mode, d):
+        if self.level.paused and not self.level.can_move:
+            return
         axis = d % 2
         sign = 1 if d > 1 else -1
         f = [0, 0]
