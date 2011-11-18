@@ -20,7 +20,7 @@ class Level:
         # variables
         self.vel = -4000
         self.spawn_r = 1
-        self.obj_size = (30, 300) # (min, max)
+        self.obj_size = (50, 200) # (min, max)
         self.scores = [0] * self.num_cars
         # lines
         l = self.lines = []
@@ -85,7 +85,7 @@ class Level:
                 lw, lh = self.game.res
                 x = lw + (w / 2) - 5
                 y = r() * lh
-                self.objs.append(Obj(self, conf.OBJ_DENSITY * w * h, x, y, self.vel, w, h))
+                self.objs.append(Obj(self, 'obj', conf.OBJ_DENSITY * w * h, x, y, self.vel, w, h))
             else:
                 self.last_spawn += 1
             # update objs

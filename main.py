@@ -294,7 +294,7 @@ text: whether the image should be rendered from a font (data is list of args to
             if data in self.files:
                 img = self.files[data]
             else:
-                img = pygame.image.load(data)
+                img = pygame.image.load(conf.IMG_DIR + data)
                 self.files[data] = img
         # scale
         if size is not None:

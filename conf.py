@@ -18,7 +18,7 @@ RES_F = pg.display.list_modes()[0]
 RES_W = (1200, 600)
 FPS = 60
 FRAME = 1. / FPS
-TESTING = False
+TESTING = True
 
 MUSIC_VOLUME = 0
 SOUND_VOLUME = 0
@@ -35,16 +35,21 @@ KEYS_FULLSCREEN = (pg.K_F11, (pg.K_RETURN, pg.KMOD_ALT, True),
                    (pg.K_KP_ENTER, pg.KMOD_ALT, True))
 
 BORDER = 20
+INITIAL_PAUSE = 1
+SPAWN_T_VAR = .5 # ratio of median time
+AIR_RESISTANCE = 3
+ANGULAR_AIR_RESISTANCE = .1
+
 CAR_MASS = 50
 CAR_ELAST = .7
 OBJ_ELAST = .7
 CAR_FRICTION = .5
 OBJ_FRICTION = .5
-AIR_RESISTANCE = 3
 CAR_ACCEL = 10000
-SPAWN_T_VAR = .5 # ratio of median time
 OBJ_DENSITY = .5
-INITIAL_PAUSE = 1
+OBJ_SHAPES = {
+    'car': ((25, 0), (13, 40), (8, 40), (-25, 0), (8, -40), (13, -40))
+}
 
 FONT = 'Chunk.otf'
 FONT_SIZE = 50
