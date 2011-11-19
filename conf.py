@@ -64,14 +64,14 @@ OBJ_SHAPES = {
 weightings = {'rock0': 1, 'rock1': 1}
 OBJS, OBJ_WEIGHTINGS = zip(*(weightings.iteritems()))
 
-BG = (210, 160, 85)
+BG = (210, 169, 108)
 FONT = 'Chunk.otf'
 FONT_SHADOW_OFFSET = (SIZE * .005, SIZE * .005)
 TITLE_TEXT = '''Enter: start
 Left/right: cycle players
 Escape: quit'''
 TITLE_FONT_COLOUR = (30, 23, 11)
-TITLE_FONT_SHADOW = (176, 139, 71)
+TITLE_FONT_SHADOW = (150, 120, 60)
 TITLE_FONT_SIZE = int(SIZE * .15)
 TITLE_FONT_SPACING = .5
 SCORES_FONT_SIZE = int(SIZE * .1)

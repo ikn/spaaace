@@ -123,6 +123,7 @@ class Level:
     def draw (self, screen):
         # background
         screen.fill(conf.BG)
+        #screen.blit(self.game.img('bg', 'bg.jpg', (800, 600)), (0, 0))
         # border
         imgs = [self.game.img(ID, ID + '.png') for ID in ('border0', 'border1')]
         bounds = self.game.res
