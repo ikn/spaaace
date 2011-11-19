@@ -10,7 +10,7 @@ if os.name == 'nt':
     import pygame._view
 import evthandler as eh
 
-from level import Level
+from title import Title
 import conf
 
 class Fonts (object):
@@ -438,6 +438,6 @@ if __name__ == '__main__':
     restarting = True
     while restarting:
         restarting = False
-        Game(Level, 4).run()
+        Game(Title).run()
 
 pygame.quit()

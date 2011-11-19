@@ -1,4 +1,5 @@
 from random import random as r
+from bisect import bisect
 from time import time
 
 import pygame
@@ -25,9 +26,8 @@ class Level:
         s = self.space = pm.Space()
         s.add_collision_handler(0, 0, None, None, col_cb, None, game)
         # variables
-        self.vel = -5000
+        self.vel = -4000
         self.spawn_r = 1
-        self.obj_size = (50, 200) # (min, max)
         self.scores = [0] * self.num_cars
         # lines
         l = self.lines = []
@@ -36,7 +36,9 @@ class Level:
                                (w - b, b, w - b, h - b),
                                (b, h - b, w - b, h - b)):
             l.append(((x0, y0), (x1, y1)))
-        self.death_bb = pm.BB(b, b, w -b, h - b)
+        # stuff
+        b = conf.PHYSICAL_BORDER
+        self.death_bb = pm.BB(b, b, w - b, h - b)
         self.outer_bb = pm.BB(0, 0, w, h)
         self.objs = []
         self.reset(True)
@@ -87,12 +89,18 @@ class Level:
             # add objs
             if r() * self.spawn_r * self.last_spawn * self.FRAME > .5:
                 self.last_spawn = 0
-                min_s, max_s = self.obj_size
-                w, h = (min_s + r() * (max_s - min_s) for i in (0, 1))
+                # choose obj type
+                l = conf.OBJ_WEIGHTINGS
+                cumulative = []
+                last = 0
+                for x in l:
+                    last += x
+                    cumulative.append(last)
+                index = min(bisect(cumulative, cumulative[-1] * r()), len(l) - 1)
+                ID = conf.OBJS[index]
+                # create
                 lw, lh = self.game.res
-                x = lw + (w / 2) - 5
-                y = r() * lh
-                self.objs.append(Obj(self, 'obj', conf.OBJ_DENSITY * w * h, x, y, self.vel, w, h))
+                self.objs.append(Obj(self, ID, lw, r() * lh, self.vel))
             else:
                 self.last_spawn += 1
             # update objs
@@ -104,20 +112,36 @@ class Level:
                 self.objs.remove(o)
         if do or self.can_move:
             self.space.step(.005)
-            if len(self.cars) < 1:
-                self.reset()
-            elif len(self.cars) == 1 and not conf.TESTING:
-                self.scores[self.cars[0].ID] += 1
-                self.reset()
+            n = len(self.cars)
+            if n < self.num_cars:
+                if n < 1:
+                    self.reset()
+                elif n == 1 and not conf.TESTING:
+                    if self._scores:
+                        self.scores[self.cars[0].ID] += 1
+                    self.reset()
 
     def draw (self, screen):
-        screen.fill((255, 255, 255))
+        # background
+        screen.fill((0, 0, 0))
+        # border
+        imgs = [self.game.img(ID, ID + '.png') for ID in ('border0', 'border1')]
+        bounds = self.game.res
         for a, b in self.lines:
-            pygame.draw.line(screen, (0, 0, 0), a, b, 5)
+            i = int(a[0] == b[0])
+            img = imgs[i]
+            size = list(img.get_size())
+            pos = list(a)
+            pos[i] = 0
+            pos[not i] -= size[not i] / 2
+            end = bounds[i]
+            while pos[i] < end:
+                screen.blit(img, pos, [0, 0] + size)
+                pos[i] += size[i]
         for c in self.cars + self.objs:
             c.draw(screen)
         # scores
-        size = conf.FONT_SIZE
+        size = conf.SCORES_FONT_SIZE
         x, y = conf.SCORES_EDGE_PADDING
         pad = conf.SCORES_PADDING
         for i, s in enumerate(self.scores):

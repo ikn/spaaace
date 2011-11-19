@@ -1,4 +1,5 @@
 from math import pi
+from random import random
 
 import pygame as pg
 import pymunk as pm
@@ -20,6 +21,7 @@ class ObjBase:
             self.offset = [-w / 2, -h / 2]
         except pg.error:
             self.img = None
+        self._last_angle = None
 
     def update (self):
         # damp angular velocity
@@ -34,26 +36,41 @@ class ObjBase:
         if self.img is None:
             pg.draw.polygon(screen, (0, 0, 0), self.shape.get_points())
         else:
-            o = self.offset
+            angle = self.body.angle
+            last = self._last_angle
             p = list(self.body.position)
+            if last is not None and abs(last - angle) < conf.ROTATE_THRESHOLD:
+                # retrieve
+                img, o = self._last_angle_data
+            else:
+                # rotate image
+                o = list(self.offset)
+                img = pg.transform.rotozoom(self.img, -180 * angle / pi, 1.)
+                rect = img.get_rect()
+                # rotated about image centre: realign to match up
+                new_c = rect.center
+                o[0] += self.centre[0] - new_c[0]
+                o[1] += self.centre[1] - new_c[1]
+                # store
+                self._last_angle = angle
+                self._last_angle_data = (img, o)
             p[0] += o[0]
             p[1] += o[1]
-            # rotate image
-            angle = self.body.angle
-            img = pg.transform.rotozoom(self.img, -180 * angle / pi, 1.)
-            rect = img.get_rect()
-            # rotated about image centre: realign to match up
-            new_c = rect.center
-            p[0] += self.centre[0] - new_c[0]
-            p[1] += self.centre[1] - new_c[1]
             screen.blit(img, p)
 
 class Obj (ObjBase):
-    def __init__ (self, level, ID, m, x, y, vx, w, h):
-        self.mass = m
-        self.moment = pm.moment_for_box(m, w, h)
+    def __init__ (self, level, ID, x, y, vx):
+        pts = conf.OBJ_SHAPES[ID]
+        self.mass = 500
+        self.moment = pm.moment_for_poly(self.mass, pts)
         b = self.body = pm.Body(self.mass, self.moment)
-        s = self.shape = pm.Poly.create_box(b, (w, h))
+        # randomise angle
+        b.angle = random() * 2 * pi
+        s = self.shape = pm.Poly(b, pts)
+        # make sure we don't start OoB (need new points after rotation)
+        pts = s.get_points()
+        width = max(i[0] for i in pts) - min(i[0] for i in pts)
+        x += (width / 2) - 2
         ObjBase.__init__(self, level, ID, b, (x, y), (vx, 0))
         s.elasticity = conf.OBJ_ELAST
         s.friction = conf.OBJ_FRICTION
@@ -73,14 +90,12 @@ class Car (ObjBase):
         self.mass = conf.CAR_MASS
         self.moment = pm.moment_for_poly(conf.CAR_MASS, pts)
         b = self.body = pm.Body(self.mass, self.moment)
-        b.position = (200, y)
-        b.velocity = (0, 0)
         s = self.shape = pm.Poly(b, pts)
-        ObjBase.__init__(self, level, ID, b, (200, y), (0, 0), pts, 'car' + str(ID))
+        pos = (level.game.res[0] / 2, y)
+        ObjBase.__init__(self, level, ID, b, pos, (0, 0), pts, 'car' + str(ID))
         s.elasticity = conf.CAR_ELAST
         s.friction = conf.CAR_FRICTION
         level.space.add(b, s)
-        self._moved = False
 
     def move (self, k, x, mode, d):
         if self.level.paused and not self.level.can_move:
@@ -90,7 +105,6 @@ class Car (ObjBase):
         f = [0, 0]
         f[axis] = sign * conf.CAR_ACCEL
         self.body.apply_impulse(f, conf.CAR_FORCE_OFFSET)
-        self._moved = True
 
     def die (self):
         self.level.game.play_snd('explode')
@@ -101,10 +115,8 @@ class Car (ObjBase):
         if not self.level.death_bb.contains(self.shape.cache_bb()):
             self.die()
             return True
-        # if moved, move towards facing the right a bit
-        if self._moved:
-            self.body.angle = conf.CAR_ANGLE_RESTORATION * self.body.angle
-            self._moved = False
+        # move towards facing the right a bit
+        self.body.angle = conf.CAR_ANGLE_RESTORATION * self.body.angle
         ObjBase.update(self)
         # damp movement
         v = self.body.velocity
