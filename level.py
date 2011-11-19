@@ -116,14 +116,13 @@ class Level:
             if n < self.num_cars:
                 if n < 1:
                     self.reset()
-                elif n == 1 and not conf.TESTING:
-                    if self._scores:
-                        self.scores[self.cars[0].ID] += 1
+                elif n == 1:
+                    self.scores[self.cars[0].ID] += 1
                     self.reset()
 
     def draw (self, screen):
         # background
-        screen.fill((0, 0, 0))
+        screen.fill(conf.BG)
         # border
         imgs = [self.game.img(ID, ID + '.png') for ID in ('border0', 'border1')]
         bounds = self.game.res
@@ -142,17 +141,18 @@ class Level:
         for c in self.cars + self.objs:
             c.draw(screen)
         # scores
-        size = conf.SCORES_FONT_SIZE
-        x, y = conf.SCORES_EDGE_PADDING
-        pad = conf.SCORES_PADDING
-        for i, s in enumerate(self.scores):
-            s = str(s)
-            h = self.game.res[1]
-            font = (conf.FONT, size, False)
-            c = conf.CAR_COLOURS_LIGHT[i]
-            sc = conf.CAR_COLOURS[i]
-            font_args = (font, s, c, (sc, conf.FONT_SHADOW_OFFSET))
-            sfc, lines = self.game.img(s + str(i), font_args, text = True)
-            screen.blit(sfc, (x, y))
-            x += sfc.get_width() + pad
+        if self.num_cars != 1:
+            size = conf.SCORES_FONT_SIZE
+            x, y = conf.SCORES_EDGE_PADDING
+            pad = conf.SCORES_PADDING
+            for i, s in enumerate(self.scores):
+                s = str(s)
+                h = self.game.res[1]
+                font = (conf.FONT, size, False)
+                c = conf.CAR_COLOURS_LIGHT[i]
+                sc = conf.CAR_COLOURS[i]
+                font_args = (font, s, c, (sc, conf.FONT_SHADOW_OFFSET))
+                sfc, lines = self.game.img(s + str(i), font_args, text = True)
+                screen.blit(sfc, (x, y))
+                x += sfc.get_width() + pad
         return True

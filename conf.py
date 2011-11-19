@@ -17,7 +17,6 @@ SIZE = 600
 RES_W = (2 * SIZE, SIZE)
 FPS = 60
 FRAME = 1. / FPS
-TESTING = True
 
 FULLSCREEN = False
 RES_F = pg.display.list_modes()[0]
@@ -56,19 +55,25 @@ OBJ_FRICTION = .5
 CAR_ACCEL = 10000
 CAR_ANGLE_RESTORATION = .8 # amount to multiply angle by each frame moved
 CAR_FORCE_OFFSET = (-5, 0)
-OBJ_DENSITY = .5
+OBJ_DENSITY = .0004
 OBJ_SHAPES = {
     'car': ((35, 0), (15, 35), (-10, 40), (-15, 0), (-10, -40), (15, -35)),
-    'rock0': ((-81, -101), (62, -105), (112, -42), (109, 58), (63, 114), (-56, 94), (-115, -5), (-110, -60))
+    'rock0': ((-81, -101), (62, -105), (112, -42), (109, 58), (63, 114), (-56, 94), (-115, -5), (-110, -60)),
+    'rock1': ((-5, -61), (71, -4), (55, 35), (-18, 59), (-60, 15), (-56, -31))
 }
-weightings = {'rock0': 1}
+weightings = {'rock0': 1, 'rock1': 1}
 OBJS, OBJ_WEIGHTINGS = zip(*(weightings.iteritems()))
 
+BG = (210, 160, 85)
 FONT = 'Chunk.otf'
-FONT_SHADOW_OFFSET = (3, 3)
-TITLE_FONT_COLOUR = (0, 0, 0)
-TITLE_FONT_SHADOW = (255, 255, 255)
-TITLE_FONT_SIZE = int(SIZE * .2)
+FONT_SHADOW_OFFSET = (SIZE * .005, SIZE * .005)
+TITLE_TEXT = '''Enter: start
+Left/right: cycle players
+Escape: quit'''
+TITLE_FONT_COLOUR = (30, 23, 11)
+TITLE_FONT_SHADOW = (176, 139, 71)
+TITLE_FONT_SIZE = int(SIZE * .15)
+TITLE_FONT_SPACING = .5
 SCORES_FONT_SIZE = int(SIZE * .1)
 SCORES_EDGE_PADDING = (.08 * SIZE, .06 * SIZE)
 SCORES_PADDING = .1 * SIZE

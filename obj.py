@@ -61,7 +61,8 @@ class ObjBase:
 class Obj (ObjBase):
     def __init__ (self, level, ID, x, y, vx):
         pts = conf.OBJ_SHAPES[ID]
-        self.mass = 500
+        width, height = [max(i[j] for i in pts) - min(i[j] for i in pts) for j in (0, 1)]
+        self.mass = conf.OBJ_DENSITY * (width * height) ** 1.5
         self.moment = pm.moment_for_poly(self.mass, pts)
         b = self.body = pm.Body(self.mass, self.moment)
         # randomise angle
@@ -69,8 +70,7 @@ class Obj (ObjBase):
         s = self.shape = pm.Poly(b, pts)
         # make sure we don't start OoB (need new points after rotation)
         pts = s.get_points()
-        width = max(i[0] for i in pts) - min(i[0] for i in pts)
-        x += (width / 2) - 2
+        x -= min(i[0] for i in pts) + 1
         ObjBase.__init__(self, level, ID, b, (x, y), (vx, 0))
         s.elasticity = conf.OBJ_ELAST
         s.friction = conf.OBJ_FRICTION
