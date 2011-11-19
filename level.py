@@ -138,6 +138,7 @@ class Level:
             while pos[i] < end:
                 screen.blit(img, pos, [0, 0] + size)
                 pos[i] += size[i]
+        # objs
         for c in self.cars + self.objs:
             c.draw(screen)
         # scores
