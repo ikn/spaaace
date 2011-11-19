@@ -20,9 +20,10 @@ FPS = 60
 FRAME = 1. / FPS
 TESTING = True
 
-MUSIC_VOLUME = 0
-SOUND_VOLUME = 0
+MUSIC_VOLUME = 70
+SOUND_VOLUME = 70
 EVENT_ENDMUSIC = pg.USEREVENT
+SOUNDS = {'crash': 2, 'explode': 7}
 
 KEYS_MOVE = (
     (pg.K_LEFT, pg.K_UP, pg.K_RIGHT, pg.K_DOWN),
@@ -46,12 +47,19 @@ OBJ_ELAST = .7
 CAR_FRICTION = .5
 OBJ_FRICTION = .5
 CAR_ACCEL = 10000
+CAR_ANGLE_RESTORATION = .8 # amount to multiply angle by each frame moved
+CAR_FORCE_OFFSET = (-5, 0)
 OBJ_DENSITY = .5
 OBJ_SHAPES = {
-    'car': ((25, 0), (13, 40), (8, 40), (-25, 0), (8, -40), (13, -40))
+    'car': ((35, 0), (15, 35), (-10, 40), (-15, 0), (-10, -40), (15, -35))
 }
 
 FONT = 'Chunk.otf'
 FONT_SIZE = 50
+FONT_COLOUR = (0, 0, 0)
+FONT_SHADOW_COLOUR = (255, 255, 255)
+FONT_SHADOW_OFFSET = (3, 3)
 SCORES_EDGE_PADDING = (40, 30)
 SCORES_PADDING = 40
+CAR_COLOURS = ((76, 0, 0), (0, 68, 76), (59, 76, 0), (76, 0, 75))
+CAR_COLOURS_LIGHT = ((140, 0, 0), (0, 125, 140), (109, 140, 0), (140, 0, 138))

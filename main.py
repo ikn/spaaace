@@ -1,5 +1,6 @@
 import os
 from time import time
+from random import choice
 
 import pygame
 from pygame.time import wait
@@ -310,12 +311,14 @@ text: whether the image should be rendered from a font (data is list of args to
         self.imgs[key] = rtn
         return rtn
 
-    def play_snd (self, ID):
+    def play_snd (self, ID, volume = 1):
         """Play a sound with the given ID.
 
 Only one instance of a sound will be played each frame.
 
 """
+        IDs = [ID + str(i) for i in xrange(conf.SOUNDS[ID])]
+        ID = choice(IDs)
         if ID in self.sounds:
             snd = self.sounds[ID]
         else:
@@ -326,10 +329,10 @@ Only one instance of a sound will be played each frame.
                 if snd.get_length() < 10 ** -3:
                     # no way this is valid
                     return
-                snd.set_volume(conf.SOUND_VOLUME * .01)
             except KeyError:
                 return # just don't play the sound if it's not registered
             self.sounds[ID] = snd
+        snd.set_volume(conf.SOUND_VOLUME * volume * .01)
         self._sounds.add(ID)
 
     def _play_snds (self):
@@ -435,6 +438,6 @@ if __name__ == '__main__':
     restarting = True
     while restarting:
         restarting = False
-        Game(Level, 3).run()
+        Game(Level, 4).run()
 
 pygame.quit()

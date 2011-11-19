@@ -15,8 +15,9 @@ class ObjBase:
             img_ID = ID
         try:
             self.img = level.game.img(ID, img_ID + '.png')
+            w, h = self.img.get_size()
             self.centre = self.img.get_rect().center
-            self.offset = [min(x[i] for x in pts) for i in (0, 1)]
+            self.offset = [-w / 2, -h / 2]
         except pg.error:
             self.img = None
 
@@ -76,10 +77,10 @@ class Car (ObjBase):
         b.velocity = (0, 0)
         s = self.shape = pm.Poly(b, pts)
         ObjBase.__init__(self, level, ID, b, (200, y), (0, 0), pts, 'car' + str(ID))
-        # TODO: every frame we move set angle towards facing right by an amount proportional to angular distance away
         s.elasticity = conf.CAR_ELAST
         s.friction = conf.CAR_FRICTION
         level.space.add(b, s)
+        self._moved = False
 
     def move (self, k, x, mode, d):
         if self.level.paused and not self.level.can_move:
@@ -88,16 +89,24 @@ class Car (ObjBase):
         sign = 1 if d > 1 else -1
         f = [0, 0]
         f[axis] = sign * conf.CAR_ACCEL
-        self.body.apply_impulse(f)
+        self.body.apply_impulse(f, conf.CAR_FORCE_OFFSET)
+        self._moved = True
 
     def die (self):
+        self.level.game.play_snd('explode')
         self.level.space.remove(self.body, self.shape)
 
     def update (self):
-        ObjBase.update(self)
+        # death condition
         if not self.level.death_bb.contains(self.shape.cache_bb()):
             self.die()
             return True
+        # if moved, move towards facing the right a bit
+        if self._moved:
+            self.body.angle = conf.CAR_ANGLE_RESTORATION * self.body.angle
+            self._moved = False
+        ObjBase.update(self)
+        # damp movement
         v = self.body.velocity
         f = []
         for vi in v:
@@ -106,5 +115,5 @@ class Car (ObjBase):
             if abs(fi) > abs(max_fi):
                 fi = -max_fi
             f.append(fi)
-        self.body.apply_impulse(f)
+        self.body.apply_impulse(f, conf.CAR_FORCE_OFFSET)
         return False

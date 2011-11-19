@@ -8,6 +8,12 @@ import evthandler as eh
 import conf
 from obj import Car, Obj
 
+def col_cb (space, arbiter, game):
+    if arbiter.is_first_contact:
+        f = arbiter.total_impulse_with_friction
+        f = (f[0] ** 2 + f[1] ** 2) ** .5
+        game.play_snd('crash', f / 400000)
+
 class Level:
     def __init__ (self, game, event_handler, num_cars = 2):
         self.game = game
@@ -17,8 +23,9 @@ class Level:
         w, h = self.game.res
         self.last_spawn = 0
         s = self.space = pm.Space()
+        s.add_collision_handler(0, 0, None, None, col_cb, None, game)
         # variables
-        self.vel = -4000
+        self.vel = -5000
         self.spawn_r = 1
         self.obj_size = (50, 200) # (min, max)
         self.scores = [0] * self.num_cars
@@ -113,11 +120,14 @@ class Level:
         size = conf.FONT_SIZE
         x, y = conf.SCORES_EDGE_PADDING
         pad = conf.SCORES_PADDING
-        for s in self.scores:
+        for i, s in enumerate(self.scores):
             s = str(s)
             h = self.game.res[1]
             font = (conf.FONT, size, False)
-            sfc, lines = self.game.img(s, (font, s, (0, 0, 0)), text = True)
+            c = conf.CAR_COLOURS_LIGHT[i]
+            sc = conf.CAR_COLOURS[i]
+            font_args = (font, s, c, (sc, conf.FONT_SHADOW_OFFSET))
+            sfc, lines = self.game.img(s + str(i), font_args, text = True)
             screen.blit(sfc, (x, y))
             x += sfc.get_width() + pad
         return True
