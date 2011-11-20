@@ -14,7 +14,8 @@ Should work wherever Pygame does.
     PLAYING
 
 The aim of the game is to push opponents into the boundary to increase your
-score; the first to 10 wins.
+score; the first to 10 wins.  In 1-player mode, just try to last as long as you
+can.
 
 The 'graphics' control on the title screen affects the amount of particles and
 sprite rotation smoothness.

@@ -45,6 +45,7 @@ class Level:
         self.vel = conf.INITIAL_VEL
         self.accel = conf.LEVEL_ACCEL
         self.scores = [0] * self.num_cars
+        self.start_time = time()
         # lines
         l = self.lines = []
         b = conf.BORDER
@@ -142,11 +143,15 @@ class Level:
 
     def toggle_paused (self, key, t, mods):
         if self.paused:
+            # unpause
+            self.start_time -= self._stored_time - time()
             del self._drawn_once
             self.paused = False
             self.frozen = False
             pygame.mixer.music.set_volume(conf.MUSIC_VOLUME * .01)
         else:
+            # pause
+            self._stored_time = time()
             self._drawn_once = 0
             self.paused = True
             self.frozen = True
@@ -189,6 +194,7 @@ class Level:
                     if not self.paused:
                         self.frozen = False
                     self.spawn_players()
+                    self.start_time = time()
             return
         # add objs
         self.next_spawn -= r() * conf.SPAWN_RATE * -self.vel
@@ -229,6 +235,8 @@ class Level:
                         self.won_end = time() + conf.WON_TIME
                     else:
                         self.reset()
+            elif self.num_cars == 1:
+                self.scores = [int(time() - self.start_time)]
         elif time() >= self.won_end:
             self.quit()
 
@@ -275,20 +283,19 @@ class Level:
         for c, p, v, ac, t, size in self.particles:
             screen.fill(c, p + [size, size])
         # scores
-        if self.num_cars != 1:
-            size = conf.SCORES_FONT_SIZE
-            x, y = conf.SCORES_EDGE_PADDING
-            pad = conf.SCORES_PADDING
-            for i, s in enumerate(self.scores):
-                s = str(s)
-                h = conf.RES[1]
-                font = (conf.FONT, size, False)
-                c = conf.CAR_COLOURS_LIGHT[i]
-                sc = conf.CAR_COLOURS[i]
-                font_args = (font, s, c, (sc, conf.SCORES_FONT_SHADOW_OFFSET))
-                sfc, lines = self.game.img(s + str(i), font_args, text = True)
-                screen.blit(sfc, (x, y))
-                x += sfc.get_width() + pad
+        size = conf.SCORES_FONT_SIZE
+        x, y = conf.SCORES_EDGE_PADDING
+        pad = conf.SCORES_PADDING
+        for i, s in enumerate(self.scores):
+            s = str(s)
+            h = conf.RES[1]
+            font = (conf.FONT, size, False)
+            c = conf.CAR_COLOURS_LIGHT[i]
+            sc = conf.CAR_COLOURS[i]
+            font_args = (font, s, c, (sc, conf.SCORES_FONT_SHADOW_OFFSET))
+            sfc, lines = self.game.img(s + str(i), font_args, text = True)
+            screen.blit(sfc, (x, y))
+            x += sfc.get_width() + pad
         # text
         won = self.won
         if self.paused or won is not None:
