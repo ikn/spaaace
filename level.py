@@ -39,6 +39,7 @@ class Level:
         w, h = conf.RES
         self.next_spawn = 1
         s = self.space = pm.Space()
+        s.collision_bias = 0
         s.add_collision_handler(0, 0, None, None, col_cb, None, self)
         # variables
         self.pos = 0
