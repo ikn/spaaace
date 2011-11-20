@@ -142,10 +142,12 @@ class Level:
 
     def toggle_paused (self, key, t, mods):
         if self.paused:
+            del self._drawn_once
             self.paused = False
             self.frozen = False
             pygame.mixer.music.set_volume(conf.MUSIC_VOLUME * .01)
         else:
+            self._drawn_once = 0
             self.paused = True
             self.frozen = True
             pygame.mixer.music.set_volume(conf.PAUSED_MUSIC_VOLUME * .01)
@@ -231,6 +233,11 @@ class Level:
             self.quit()
 
     def draw (self, screen):
+        if self.paused and not self.particles:
+            if self._drawn_once == 1:
+                return False
+            else:
+                self._drawn_once = 1
         # background
         try:
             img = self.game.img('bg', 'bg.png')

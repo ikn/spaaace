@@ -112,6 +112,7 @@ TITLE_TEXT = '''Enter: start
 Left/right: players
 Up/down: graphics
 Escape: quit'''
-PAUSE_TEXT = '''Space: continue
+PAUSE_TEXT = '''Paused
+Space: continue
 Q: quit'''
 WON_TEXT = 'Winner'
