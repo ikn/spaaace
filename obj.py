@@ -15,7 +15,7 @@ class ObjBase:
         if img_ID is None:
             img_ID = ID
         try:
-            self.img = level.game.img(ID, img_ID + '.png')
+            self.img = level.game.img(img_ID, img_ID + '.png')
             w, h = self.img.get_size()
             self.centre = self.img.get_rect().center
             self.offset = o = [-w / 2, -h / 2]
@@ -106,10 +106,14 @@ class Car (ObjBase):
         self.body.apply_impulse(f, conf.CAR_FORCE_OFFSET)
 
     def die (self):
-        self.level.game.play_snd('explode')
-        self.level.spawn_particles(self.body.position,
-            (conf.CAR_COLOURS[self.ID], conf.GRAPHICS * conf.DEATH_PARTICLES),
-            (conf.CAR_COLOURS_LIGHT[self.ID], conf.GRAPHICS * conf.DEATH_PARTICLES)
+        l = self.level
+        l.game.play_snd('explode')
+        p = self.body.position
+        force = conf.DEATH_PARTICLES
+        l.explosion_force((force, p), exclude = [self])
+        self.level.spawn_particles(p,
+            (conf.CAR_COLOURS[self.ID], conf.GRAPHICS * force),
+            (conf.CAR_COLOURS_LIGHT[self.ID], conf.GRAPHICS * force)
         )
         self.level.space.remove(self.body, self.shape)
 

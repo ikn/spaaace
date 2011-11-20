@@ -69,17 +69,23 @@ class Level:
     def reset (self, first = False):
         s = self.space
         try:
+            # destroy all objects
+            forces = []
             for o in self.objs:
-                amount = int(conf.GRAPHICS * conf.OBJ_PARTICLES * o.mass)
-                self.spawn_particles(o.body.position,
+                amount = conf.OBJ_PARTICLES * o.mass
+                p = o.body.position
+                forces.append((amount, p))
+                amount = int(conf.GRAPHICS * amount)
+                self.spawn_particles(p,
                     ((conf.OBJ_COLOUR, amount)), ((conf.OBJ_COLOUR_LIGHT, amount)))
                 s.remove(o.body, o.shape)
+            self.objs = []
+            self.explosion_force(*forces)
         except AttributeError:
-            pass
+            self.objs = []
         # objs
         if first:
             self.spawn_players()
-        self.objs = []
         self.frozen = not first
         self.freeze_end = False if first else time() + conf.FREEZE_TIME
 
@@ -118,6 +124,21 @@ class Level:
                 v = [speed * cos(angle), speed * sin(angle)]
                 t = int(r() * life)
                 ptcls.append((c, list(pos), v, ac, t, size))
+
+    def explosion_force (self, *forces, **kw):
+        exclude = kw.get('exclude', [])
+        for f, p1 in forces:
+            f *= conf.EXPLOSION_FORCE
+            # apply to every existing object
+            for o in self.cars + self.objs:
+                if o in exclude:
+                    continue
+                p2 = o.body.position
+                assert p1 != p2
+                r = p2 - p1
+                r_sq = r.get_length_sqrd()
+                f = (f * o.mass / r_sq) * r.normalized()
+                o.body.apply_impulse(f)
 
     def toggle_paused (self, key, t, mods):
         p = self.paused

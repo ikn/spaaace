@@ -31,6 +31,7 @@ class Title (Level):
         conf.GRAPHICS = max(conf.GRAPHICS + d * .02, 0)
         if t == 1:
             # key released
+            self.game.play_snd('explode')
             ID = randrange(4)
             w, h = self.game.res
             self.particles = []
