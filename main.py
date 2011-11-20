@@ -4,6 +4,7 @@ from random import choice
 
 import pygame
 from pygame.time import wait
+pygame.mixer.pre_init(buffer = 1024)
 pygame.init()
 if os.name == 'nt':
     # for Windows freeze support
@@ -164,8 +165,7 @@ backends: a list of previous (nested) backends, most 'recent' last.
         self.running = False
         self.imgs = {}
         self.files = {}
-        self.sounds = {}
-        self._sounds = set()
+        self.sounds = []
         # start playing music
         pygame.mixer.music.set_volume(conf.MUSIC_VOLUME * .01)
         pygame.mixer.music.set_endevent(conf.EVENT_ENDMUSIC)
@@ -319,27 +319,23 @@ Only one instance of a sound will be played each frame.
 """
         IDs = [ID + str(i) for i in xrange(conf.SOUNDS[ID])]
         ID = choice(IDs)
-        if ID in self.sounds:
-            snd = self.sounds[ID]
-        else:
-            # load sound
-            try:
-                snd = conf.SOUND_DIR + ID + '.ogg'
-                snd = pygame.mixer.Sound(snd)
-                if snd.get_length() < 10 ** -3:
-                    # no way this is valid
-                    return
-            except KeyError:
-                return # just don't play the sound if it's not registered
-            self.sounds[ID] = snd
+        # load sound
+        try:
+            snd = conf.SOUND_DIR + ID + '.ogg'
+            snd = pygame.mixer.Sound(snd)
+            if snd.get_length() < 10 ** -3:
+                # no way this is valid
+                return
+        except KeyError:
+            return # just don't play the sound if it's not registered
         snd.set_volume(conf.SOUND_VOLUME * volume * .01)
-        self._sounds.add(ID)
+        self.sounds.append(snd)
 
     def _play_snds (self):
         """Play queued up sounds for this frame."""
-        for ID in self._sounds:
-            self.sounds[ID].play()
-        self._sounds = set()
+        for snd in self.sounds:
+            snd.play()
+        self.sounds = []
 
     def find_music (self):
         """Store a list of music files."""

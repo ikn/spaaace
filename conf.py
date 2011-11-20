@@ -13,8 +13,7 @@ WINDOW_ICON = None
 WINDOW_TITLE = None
 RESIZABLE = False
 FLAGS = pg.DOUBLEBUF
-SIZE = 600
-RES_W = (2 * SIZE, SIZE)
+RES_W = RES = (1200, 600)
 FPS = 60
 FRAME = 1. / FPS
 STEP = .005
@@ -23,7 +22,8 @@ FPS_STAT_TIME = 5
 FULLSCREEN = False
 RES_F = pg.display.list_modes()[0]
 
-MUSIC_VOLUME = 70
+MUSIC_VOLUME = 60
+PAUSED_MUSIC_VOLUME = 20
 SOUND_VOLUME = 70
 EVENT_ENDMUSIC = pg.USEREVENT
 CRASH_VOLUME = .0000025
@@ -55,16 +55,18 @@ PARTICLE_ACCEL = -1
 PARTICLE_LIFE = 120
 PARTICLE_SIZE = 10
 
-BORDER = .03 * SIZE
+BORDER = 18
 FREEZE_TIME = PARTICLE_LIFE * FRAME
+WON_TIME = 5
 SPAWN_T_VAR = .5 # ratio of median time
 AIR_RESISTANCE = 3
 ANGULAR_AIR_RESISTANCE = .1
 INITIAL_VEL = -1000
+TARGET_SCORE = 10
 
 EXPLOSION_FORCE = 10000
 BG_SPEED = 1 # ratio of FG speed
-SPAWN_RATE = .000025 # ratio of level speed
+SPAWN_RATE = .00002 # ratio of level speed
 LEVEL_ACCEL = .5
 CAR_MASS = 50
 CAR_ELAST = 1.7
@@ -82,21 +84,22 @@ OBJ_SHAPES = {
     'rock1': ((-5, -61), (71, -4), (55, 35), (-18, 59), (-60, 15), (-56, -31)),
     'rock2': ((10, -22), (22, -8), (15, 24), (-21, 21), (-22, -7))
 }
-weightings = {'rock0': 1, 'rock1': 1, 'rock2': 2}
+weightings = {'rock0': 1, 'rock1': 1, 'rock2': 1}
 OBJS, OBJ_WEIGHTINGS = zip(*(weightings.iteritems()))
 
 GRAPHICS = .5
 
 BG = (0, 0, 0)
 FONT = 'Chunk.otf'
-FONT_SHADOW_OFFSET = (SIZE * .005, SIZE * .005)
 UI_FONT_COLOUR = (200, 200, 150)
+UI_FONT_SIZE = 90
 UI_FONT_SHADOW = (50, 50, 40)
-UI_FONT_SIZE = int(SIZE * .15)
+UI_FONT_SHADOW_OFFSET = (4, 4)
 UI_FONT_SPACING = int(.2 * UI_FONT_SIZE)
-SCORES_FONT_SIZE = int(SIZE * .1)
-SCORES_EDGE_PADDING = (.08 * SIZE, .06 * SIZE)
-SCORES_PADDING = .1 * SIZE
+SCORES_FONT_SIZE = 60
+SCORES_FONT_SHADOW_OFFSET = (3, 3)
+SCORES_EDGE_PADDING = (48, 36)
+SCORES_PADDING = 60
 CAR_COLOURS = ((76, 0, 0), (0, 68, 76), (59, 76, 0), (76, 0, 75))
 CAR_COLOURS_LIGHT = ((140, 0, 0), (0, 125, 140), (109, 140, 0), (140, 0, 138))
 OBJ_COLOUR = (59, 47, 23)
@@ -105,9 +108,10 @@ MAX_ROTATE_THRESHOLD = .1
 ROTATE_THRESHOLD = .01
 ROTATE_THRESHOLD_POWER = 1.5
 
-PAUSE_TEXT = '''Space: continue
-Q: quit'''
 TITLE_TEXT = '''Enter: start
 Left/right: players
 Up/down: graphics
 Escape: quit'''
+PAUSE_TEXT = '''Space: continue
+Q: quit'''
+WON_TEXT = 'Winner'

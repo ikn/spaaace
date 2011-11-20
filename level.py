@@ -36,7 +36,7 @@ class Level:
         self.event_handler = event_handler
         self.num_cars = num_cars
         self.FRAME = conf.FRAME
-        w, h = self.game.res
+        w, h = conf.RES
         self.next_spawn = 1
         s = self.space = pm.Space()
         s.add_collision_handler(0, 0, None, None, col_cb, None, self)
@@ -59,11 +59,12 @@ class Level:
         if allow_pause:
             event_handler.add_key_handlers([
                 (conf.KEYS_BACK + conf.KEYS_NEXT, self.toggle_paused, eh.MODE_ONDOWN),
-                (conf.KEYS_QUIT, lambda *args: self.game.quit_backend(), eh.MODE_ONDOWN)
+                (conf.KEYS_QUIT, self.quit, eh.MODE_ONDOWN)
             ])
         self.paused = False
         self.particles = []
         self.cars = []
+        self.won = None
         self.reset(True)
 
     def reset (self, first = False):
@@ -95,7 +96,7 @@ class Level:
             ps = [i for i in xrange(self.num_cars) if i not in IDs]
         cs = self.cars
         keys = []
-        d = self.game.res[1] / (self.num_cars + 1)
+        d = conf.RES[1] / (self.num_cars + 1)
         for i in ps:
             assert not any(c.ID == i for c in cs)
             c = Car(self, i, d * (i + 1))
@@ -137,13 +138,21 @@ class Level:
                 assert p1 != p2
                 r = p2 - p1
                 r_sq = r.get_length_sqrd()
-                f = (f * o.mass / r_sq) * r.normalized()
-                o.body.apply_impulse(f)
+                o.body.apply_impulse((f * o.mass / r_sq) * r.normalized())
 
     def toggle_paused (self, key, t, mods):
-        p = self.paused
-        self.paused = not p
-        self.frozen = not p
+        if self.paused:
+            self.paused = False
+            self.frozen = False
+            pygame.mixer.music.set_volume(conf.MUSIC_VOLUME * .01)
+        else:
+            self.paused = True
+            self.frozen = True
+            pygame.mixer.music.set_volume(conf.PAUSED_MUSIC_VOLUME * .01)
+
+    def quit (self, *args):
+        pygame.mixer.music.set_volume(conf.MUSIC_VOLUME * .01)
+        self.game.quit_backend()
 
     def update (self):
         if not self.paused:
@@ -193,7 +202,7 @@ class Level:
             index = min(bisect(cumulative, cumulative[-1] * r()), len(l) - 1)
             ID = conf.OBJS[index]
             # create
-            lw, lh = self.game.res
+            lw, lh = conf.RES
             self.objs.append(Obj(self, ID, lw, r() * lh, self.vel))
         # update objs
         rm = []
@@ -205,13 +214,21 @@ class Level:
         # increase speed
         self.vel -= self.accel
         n = len(self.cars)
-        if n < self.num_cars:
-            if n < 1:
-                self.reset()
-            elif n == 1:
-                winner = self.cars[0]
-                self.scores[winner.ID] += 1
-                self.reset()
+        if self.won is None:
+            if n < self.num_cars:
+                if n < 1:
+                    self.reset()
+                elif n == 1:
+                    winner = self.cars[0]
+                    ID = winner.ID
+                    self.scores[ID] += 1
+                    if self.scores[ID] == conf.TARGET_SCORE:
+                        self.won = ID
+                        self.won_end = time() + conf.WON_TIME
+                    else:
+                        self.reset()
+        elif time() >= self.won_end:
+            self.quit()
 
     def draw (self, screen):
         # background
@@ -223,7 +240,7 @@ class Level:
             # tile image
             iw, ih = img.get_size()
             x = int(self.pos) % iw - iw
-            w, h = self.game.res
+            w, h = conf.RES
             while x < w:
                 y = 0
                 while y < h:
@@ -232,7 +249,7 @@ class Level:
                 x += iw
         # border
         imgs = [self.game.img(ID, ID + '.png') for ID in ('border0', 'border1')]
-        bounds = self.game.res
+        bounds = conf.RES
         for a, b in self.lines:
             i = int(a[0] == b[0])
             img = imgs[i]
@@ -257,21 +274,31 @@ class Level:
             pad = conf.SCORES_PADDING
             for i, s in enumerate(self.scores):
                 s = str(s)
-                h = self.game.res[1]
+                h = conf.RES[1]
                 font = (conf.FONT, size, False)
                 c = conf.CAR_COLOURS_LIGHT[i]
                 sc = conf.CAR_COLOURS[i]
-                font_args = (font, s, c, (sc, conf.FONT_SHADOW_OFFSET))
+                font_args = (font, s, c, (sc, conf.SCORES_FONT_SHADOW_OFFSET))
                 sfc, lines = self.game.img(s + str(i), font_args, text = True)
                 screen.blit(sfc, (x, y))
                 x += sfc.get_width() + pad
-        # pause screen text
-        if self.paused:
+        # text
+        won = self.won
+        if self.paused or won is not None:
             font = (conf.FONT, conf.UI_FONT_SIZE, False)
-            shadow = (conf.UI_FONT_SHADOW, conf.FONT_SHADOW_OFFSET)
-            font_data = (font, conf.PAUSE_TEXT, conf.UI_FONT_COLOUR, shadow, None, 0, False, conf.UI_FONT_SPACING)
-            sfc, lines = self.game.img('paused', font_data, text = True)
+            shadow = [conf.UI_FONT_SHADOW, conf.UI_FONT_SHADOW_OFFSET]
+            font_data = [font, conf.PAUSE_TEXT, conf.UI_FONT_COLOUR, shadow, None, 0, False, conf.UI_FONT_SPACING]
+            if self.paused:
+                # pause screen text
+                ID = 'paused'
+            else:
+                # winner text
+                ID = 'won' + str(won)
+                font_data[1] = conf.WON_TEXT
+                font_data[2] = conf.CAR_COLOURS_LIGHT[won]
+                font_data[3][0] = conf.CAR_COLOURS[won]
+            sfc, lines = self.game.img(ID, font_data, text = True)
             sw, sh = sfc.get_size()
-            w, h = self.game.res
+            w, h = conf.RES
             screen.blit(sfc, ((w - sw) / 2, (h - sh) / 2))
         return True

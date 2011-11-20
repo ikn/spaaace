@@ -1,0 +1,40 @@
+A game about crashing into enemies and dodging rocks.
+
+    DEPENDENCIES
+
+Python (2.6 or later 2.x)
+Pygame (1.8 or later, probably; tested with 1.9.1)
+
+    RUNNING
+
+'python main.py'
+
+Should work wherever Pygame does.
+
+    PLAYING
+
+The aim of the game is to push opponents into the boundary to increase your
+score; the first to 10 wins.
+
+The 'graphics' control on the title screen affects the amount of particles and
+sprite rotation smoothness.
+
+Player controls:
+
+player 1: WASD
+player 2: arrow keys
+player 3: numpad arrow keys
+player 4: IJKL
+
+    LICENSING
+
+Source code is available under the new BSD license (included).
+
+All audio files are available under Creative Commons licenses.  Sounds are from
+Freesound and are by:
+
+inferno <http://www.freesound.org/people/inferno/>
+Michael Manzke <http://www.freesound.org/people/m_O_m/>
+CGEffex <http://www.freesound.org/people/CGEffex/>
+
+Music is by copperhead <http://dig.ccmixter.org/dig?user=copperhead>.

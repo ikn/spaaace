@@ -33,7 +33,7 @@ class Title (Level):
             # key released
             self.game.play_snd('explode')
             ID = randrange(4)
-            w, h = self.game.res
+            w, h = conf.RES
             self.particles = []
             self.spawn_particles((random() * w, random() * h),
                 (conf.CAR_COLOURS[ID], conf.GRAPHICS * conf.DEATH_PARTICLES),
@@ -50,7 +50,7 @@ class Title (Level):
         size = conf.UI_FONT_SIZE
         spacing = conf.UI_FONT_SPACING
         font = (conf.FONT, size, False)
-        shadow = (conf.UI_FONT_SHADOW, conf.FONT_SHADOW_OFFSET)
+        shadow = (conf.UI_FONT_SHADOW, conf.UI_FONT_SHADOW_OFFSET)
         font_data = [font, conf.TITLE_TEXT, conf.UI_FONT_COLOUR, shadow, None, 0, False, spacing]
         # render
         sfc1, lines = self.game.img('title', font_data, text = True)
@@ -60,7 +60,7 @@ class Title (Level):
         y0 = int(conf.SCORES_EDGE_PADDING[1] + conf.SCORES_FONT_SIZE)
         sw, sh = sfc1.get_size()
         total_w = sw + sfc2.get_width()
-        w, h = self.game.res
+        w, h = conf.RES
         h -= int(conf.BORDER) + y0
         if self.x is None:
             self.x = (w - total_w) / 2
