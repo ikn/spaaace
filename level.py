@@ -1,3 +1,4 @@
+from math import pi, cos, sin
 from random import random as r
 from bisect import bisect
 from time import time
@@ -9,25 +10,40 @@ import evthandler as eh
 import conf
 from obj import Car, Obj
 
-def col_cb (space, arbiter, game):
+def col_cb (space, arbiter, level):
     if arbiter.is_first_contact:
+        # sound
         f = arbiter.total_impulse_with_friction
         f = (f[0] ** 2 + f[1] ** 2) ** .5
-        game.play_snd('crash', f / 400000)
+        level.game.play_snd('crash', f * conf.CRASH_VOLUME)
+        # particles
+        amount = f * conf.GRAPHICS * conf.CRASH_PARTICLES
+        ptcls = []
+        car_shapes = dict((c.shape, c.ID) for c in level.cars)
+        for shape in arbiter.shapes:
+            if shape in car_shapes:
+                ID = car_shapes[shape]
+                ptcls.append((conf.CAR_COLOURS[ID], amount))
+                ptcls.append((conf.CAR_COLOURS_LIGHT[ID], amount))
+            else:
+                ptcls.append((conf.OBJ_COLOUR, amount))
+                ptcls.append((conf.OBJ_COLOUR_LIGHT, amount))
+        level.spawn_particles(arbiter.contacts[0].position, *ptcls)
 
 class Level:
-    def __init__ (self, game, event_handler, num_cars = 2):
+    def __init__ (self, game, event_handler, num_cars = 2, allow_pause = True):
         self.game = game
         self.event_handler = event_handler
         self.num_cars = num_cars
         self.FRAME = conf.FRAME
         w, h = self.game.res
-        self.last_spawn = 0
+        self.next_spawn = 1
         s = self.space = pm.Space()
-        s.add_collision_handler(0, 0, None, None, col_cb, None, game)
+        s.add_collision_handler(0, 0, None, None, col_cb, None, self)
         # variables
-        self.vel = -4000
-        self.spawn_r = 1
+        self.pos = 0
+        self.vel = conf.INITIAL_VEL
+        self.accel = conf.LEVEL_ACCEL
         self.scores = [0] * self.num_cars
         # lines
         l = self.lines = []
@@ -37,26 +53,45 @@ class Level:
                                (b, h - b, w - b, h - b)):
             l.append(((x0, y0), (x1, y1)))
         # stuff
-        b = conf.PHYSICAL_BORDER
         self.death_bb = pm.BB(b, b, w - b, h - b)
         self.outer_bb = pm.BB(0, 0, w, h)
         self.objs = []
+        if allow_pause:
+            event_handler.add_key_handlers([
+                (conf.KEYS_BACK + conf.KEYS_NEXT, self.toggle_paused, eh.MODE_ONDOWN),
+                (conf.KEYS_QUIT, lambda *args: self.game.quit_backend(), eh.MODE_ONDOWN)
+            ])
+        self.paused = False
+        self.particles = []
+        self.cars = []
         self.reset(True)
 
     def reset (self, first = False):
         s = self.space
-        w, h = self.game.res
         try:
-            for o in self.cars + self.objs:
+            for o in self.objs:
+                amount = int(conf.GRAPHICS * conf.OBJ_PARTICLES * o.mass)
+                self.spawn_particles(o.body.position,
+                    ((conf.OBJ_COLOUR, amount)), ((conf.OBJ_COLOUR_LIGHT, amount)))
                 s.remove(o.body, o.shape)
         except AttributeError:
             pass
         # objs
-        cs = self.cars = []
+        if first:
+            self.spawn_players()
         self.objs = []
+        self.frozen = not first
+        self.freeze_end = False if first else time() + conf.FREEZE_TIME
+
+    def spawn_players (self, *ps):
+        if not ps:
+            IDs = [c.ID for c in self.cars]
+            ps = [i for i in xrange(self.num_cars) if i not in IDs]
+        cs = self.cars
         keys = []
-        d = h / (self.num_cars + 1)
-        for i in xrange(self.num_cars):
+        d = self.game.res[1] / (self.num_cars + 1)
+        for i in ps:
+            assert not any(c.ID == i for c in cs)
             c = Car(self, i, d * (i + 1))
             cs.append(c)
             for j, k in enumerate(conf.KEYS_MOVE[i]):
@@ -64,20 +99,36 @@ class Level:
                     k = (k,)
                 keys.append((k, [(c.move, (j,))], eh.MODE_HELD))
         self.event_handler.add_key_handlers(keys)
-        self.paused = True
-        self.init_pause_end = time() + conf.INITIAL_PAUSE
-        self.can_move = first
+
+    def spawn_particles (self, pos, *colours):
+        # colours is a list of (colour, amount) tuples
+        pos = list(pos)
+        ptcls = self.particles
+        max_speed = conf.PARTICLE_SPEED
+        max_speed_accel = conf.PARTICLE_SPEED_IF_ACCEL
+        life = conf.PARTICLE_LIFE
+        max_size = conf.PARTICLE_SIZE
+        for c, amount in colours:
+            while amount > 0:
+                size = int(r() * max_size)
+                amount -= size
+                angle = r() * 2 * pi
+                ac = r() > .5
+                speed = r() * (max_speed_accel if ac else max_speed)
+                v = [speed * cos(angle), speed * sin(angle)]
+                t = int(r() * life)
+                ptcls.append((c, list(pos), v, ac, t, size))
+
+    def toggle_paused (self, key, t, mods):
+        p = self.paused
+        self.paused = not p
+        self.frozen = not p
 
     def update (self):
-        do = True
-        if self.paused:
-            if self.init_pause_end:
-                if time() >= self.init_pause_end:
-                    self.init_pause_end = False
-                    self.paused = False
-                    self.can_move = False
-            do = False
-        if do or self.can_move:
+        if not self.paused:
+            self.space.step(conf.STEP)
+            # move background
+            self.pos += conf.BG_SPEED * self.vel * conf.STEP
             # update cars
             rm = []
             for c in self.cars:
@@ -85,45 +136,79 @@ class Level:
                     rm.append(c)
             for c in rm:
                 self.cars.remove(c)
-        if do:
-            # add objs
-            if r() * self.spawn_r * self.last_spawn * self.FRAME > .5:
-                self.last_spawn = 0
-                # choose obj type
-                l = conf.OBJ_WEIGHTINGS
-                cumulative = []
-                last = 0
-                for x in l:
-                    last += x
-                    cumulative.append(last)
-                index = min(bisect(cumulative, cumulative[-1] * r()), len(l) - 1)
-                ID = conf.OBJS[index]
-                # create
-                lw, lh = self.game.res
-                self.objs.append(Obj(self, ID, lw, r() * lh, self.vel))
-            else:
-                self.last_spawn += 1
-            # update objs
-            rm = []
-            for o in self.objs:
-                if o.update():
-                    rm.append(o)
-            for o in rm:
-                self.objs.remove(o)
-        if do or self.can_move:
-            self.space.step(.005)
-            n = len(self.cars)
-            if n < self.num_cars:
-                if n < 1:
-                    self.reset()
-                elif n == 1:
-                    self.scores[self.cars[0].ID] += 1
-                    self.reset()
+        # update particles
+        ptcls = []
+        a = conf.PARTICLE_ACCEL
+        for c, p, v, ac, t, size in self.particles:
+            p[0] += v[0]
+            p[1] += v[1]
+            if ac:
+                v[0] += (1 if v[0] > 0 else -1) * a
+                v[1] += (1 if v[1] > 0 else -1) * a
+            t -= 1
+            if t > 0:
+                ptcls.append((c, p, v, ac, t, size))
+        self.particles = ptcls
+        # do nothing else if frozen
+        if self.frozen:
+            if self.freeze_end:
+                if time() >= self.freeze_end:
+                    self.freeze_end = False
+                    if not self.paused:
+                        self.frozen = False
+                    self.spawn_players()
+            return
+        # add objs
+        self.next_spawn -= r() * conf.SPAWN_RATE * -self.vel
+        if self.next_spawn < 0:
+            self.next_spawn = 1
+            # choose obj type
+            l = conf.OBJ_WEIGHTINGS
+            cumulative = []
+            last = 0
+            for x in l:
+                last += x
+                cumulative.append(last)
+            index = min(bisect(cumulative, cumulative[-1] * r()), len(l) - 1)
+            ID = conf.OBJS[index]
+            # create
+            lw, lh = self.game.res
+            self.objs.append(Obj(self, ID, lw, r() * lh, self.vel))
+        # update objs
+        rm = []
+        for o in self.objs:
+            if o.update():
+                rm.append(o)
+        for o in rm:
+            self.objs.remove(o)
+        # increase speed
+        self.vel -= self.accel
+        n = len(self.cars)
+        if n < self.num_cars:
+            if n < 1:
+                self.reset()
+            elif n == 1:
+                winner = self.cars[0]
+                self.scores[winner.ID] += 1
+                self.reset()
 
     def draw (self, screen):
         # background
-        screen.fill(conf.BG)
-        #screen.blit(self.game.img('bg', 'bg.jpg', (800, 600)), (0, 0))
+        try:
+            img = self.game.img('bg', 'bg.png')
+        except pygame.error:
+            screen.fill(conf.BG)
+        else:
+            # tile image
+            iw, ih = img.get_size()
+            x = int(self.pos) % iw - iw
+            w, h = self.game.res
+            while x < w:
+                y = 0
+                while y < h:
+                    screen.blit(img, (x, y))
+                    y += ih
+                x += iw
         # border
         imgs = [self.game.img(ID, ID + '.png') for ID in ('border0', 'border1')]
         bounds = self.game.res
@@ -141,6 +226,9 @@ class Level:
         # objs
         for c in self.cars + self.objs:
             c.draw(screen)
+        # particles
+        for c, p, v, ac, t, size in self.particles:
+            screen.fill(c, p + [size, size])
         # scores
         if self.num_cars != 1:
             size = conf.SCORES_FONT_SIZE
@@ -156,4 +244,13 @@ class Level:
                 sfc, lines = self.game.img(s + str(i), font_args, text = True)
                 screen.blit(sfc, (x, y))
                 x += sfc.get_width() + pad
+        # pause screen text
+        if self.paused:
+            font = (conf.FONT, conf.UI_FONT_SIZE, False)
+            shadow = (conf.UI_FONT_SHADOW, conf.FONT_SHADOW_OFFSET)
+            font_data = (font, conf.PAUSE_TEXT, conf.UI_FONT_COLOUR, shadow, None, 0, False, conf.UI_FONT_SPACING)
+            sfc, lines = self.game.img('paused', font_data, text = True)
+            sw, sh = sfc.get_size()
+            w, h = self.game.res
+            screen.blit(sfc, ((w - sw) / 2, (h - sh) / 2))
         return True

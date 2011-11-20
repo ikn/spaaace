@@ -385,7 +385,9 @@ Only one instance of a sound will be played each frame.
     def run (self):
         """Main loop."""
         self.running = True
-        t0 = time()
+        stat_t = conf.FPS_STAT_TIME
+        start_stat = t0 = time()
+        n = 0
         while self.running:
             # update
             self._update_again = False
@@ -399,8 +401,14 @@ Only one instance of a sound will be played each frame.
             self._draw()
             # wait
             t1 = time()
-            wait(int(1000 * (self.backend.FRAME - t1 + t0)))
-            t0 += self.backend.FRAME
+            frame = self.backend.FRAME
+            wait(int(1000 * (frame - t1 + t0)))
+            t0 = t1
+            n += 1
+            if n >= stat_t / frame:
+                print stat_t / (frame * (t0 - start_stat))
+                n = 0
+                start_stat = t0
 
     def restart (self, *args):
         """Restart the game."""
@@ -435,6 +443,7 @@ if __name__ == '__main__':
         pygame.display.set_icon(pygame.image.load(conf.WINDOW_ICON))
     if conf.WINDOW_TITLE is not None:
         pygame.display.set_caption(conf.WINDOW_TITLE)
+    pygame.mouse.set_visible(False)
     restarting = True
     while restarting:
         restarting = False
