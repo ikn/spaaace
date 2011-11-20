@@ -396,8 +396,8 @@ Only one instance of a sound will be played each frame.
             # draw
             self._draw()
             # wait
-            t1 = time()
             frame = self.backend.FRAME
+            t1 = time()
             wait(int(1000 * (frame - t1 + t0)))
             t0 = t1
             n += 1
