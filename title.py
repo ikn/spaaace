@@ -56,7 +56,7 @@ class Title (Level):
         font_data = [font, conf.TITLE_TEXT, conf.UI_FONT_COLOUR, shadow, None, 0, False, spacing]
         # render
         sfc1, lines = self.game.img('title', font_data, text = True)
-        font_data[1] = ' ' + str(conf.GRAPHICS)
+        font_data[1] = ' {:.1f}'.format(conf.GRAPHICS)
         sfc2, lines = self.game.img(conf.GRAPHICS, font_data, text = True)
         # position
         y0 = int(conf.SCORES_EDGE_PADDING[1] + conf.SCORES_FONT_SIZE)

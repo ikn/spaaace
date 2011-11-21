@@ -273,7 +273,7 @@ ID: a string identifier unique to the expected result, ignoring size.
 data: if text is True, a tuple of args to pass to Fonts.text, else a filename
       to load.
 size: if given, scale the image to this size.  Can be a rect, in which case its
-      dimension is used.
+      dimension is used.  Ignored if text == True.
 text: whether the image should be rendered from a font (data is list of args to
       pass to Font.text).  If True, returns (img, lines) like Font.text.
 
@@ -286,30 +286,37 @@ text: whether the image should be rendered from a font (data is list of args to
         key = (ID, size)
         if key in self.imgs:
             return self.imgs[key]
+        got_size = size is not None and size != 1 and not text
         # else new: load/render
         if text:
-            rtn = self.fonts.text(*data)
-            img = rtn[0]
+            img, lines = self.fonts.text(*data)
+            img = img.convert_alpha()
         else:
             # also cache loaded images to reduce file I/O
             if data in self.files:
                 img = self.files[data]
             else:
                 img = pygame.image.load(conf.IMG_DIR + data)
+                # convert first if won't resize, as it'll come from here
+                if not got_size:
+                    if img.get_alpha() is None and img.get_colorkey() is None:
+                        img = img.convert()
+                    else:
+                        img = img.convert_alpha()
                 self.files[data] = img
+
         # scale
-        if size is not None:
+        if got_size:
             img = pygame.transform.smoothscale(img, size)
-        if not text:
-            rtn = img
-        # speed up blitting
-        if img.get_alpha() is None:
-            img = img.convert()
         else:
-            img = img.convert_alpha()
-        # add to cache
-        self.imgs[key] = rtn
-        return rtn
+            # speed up blitting (if not resized, this is already done)
+            if img.get_alpha() is None and img.get_colorkey() is None:
+                img = img.convert()
+            else:
+                img = img.convert_alpha()
+            # add to cache (if not resized, this is in the file cache)
+            self.imgs[key] = (img, lines) if text else img
+        return (img, lines) if text else img
 
     def play_snd (self, ID, volume = 1):
         """Play a sound with the given ID.

@@ -1,5 +1,5 @@
 from math import pi
-from random import random
+from random import random, choice
 
 import pygame as pg
 import pymunk as pm
@@ -10,6 +10,10 @@ class ObjBase:
     def __init__ (self, level, ID, b, pos, v, pts, *img_IDs):
         self.level = level
         self.ID = ID
+        if isinstance(self.ID, int):
+            self.colour = conf.CAR_COLOURS_LIGHT[self.ID]
+        else:
+            self.colour = choice((conf.OBJ_COLOUR_LIGHT, conf.OBJ_COLOUR))
         b.position = pos
         b.velocity = v
         if not img_IDs:
@@ -26,8 +30,8 @@ class ObjBase:
         self._last_angle = None
 
     def draw (self, screen):
-        if not self.imgs:
-            pg.draw.polygon(screen, (0, 0, 0), self.shape.get_points())
+        if conf.GRAPHICS <= conf.NO_IMAGE_THRESHOLD or not self.imgs:
+            pg.draw.polygon(screen, self.colour, self.shape.get_points())
         else:
             angle = self.body.angle
             last = self._last_angle
@@ -45,7 +49,12 @@ class ObjBase:
                 imgs = []
                 for img in self.imgs:
                     # rotate image
-                    imgs.append(pg.transform.rotozoom(img, -180 * angle / pi, 1.))
+                    img = pg.transform.rotozoom(img, -180 * angle / pi, 1.)
+                    if img.get_alpha() is None and img.get_colorkey() is None:
+                        img = img.convert()
+                    else:
+                        img = img.convert_alpha()
+                    imgs.append(img)
                 # get offset
                 o = list(self.offset)
                 rect = imgs[0].get_rect()

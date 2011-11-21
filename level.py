@@ -50,9 +50,8 @@ class Level:
         # lines
         l = self.lines = []
         b = conf.BORDER
-        for x0, y0, x1, y1 in ((b, b, b, h - b), (b, b, w - b, b),
-                               (w - b, b, w - b, h - b),
-                               (b, h - b, w - b, h - b)):
+        for x0, y0, x1, y1 in ((b, 0, b, h), (0, b, w, b), (w - b, 0, w - b, h),
+                               (0, h - b, w, h - b)):
             l.append(((x0, y0), (x1, y1)))
         # stuff
         self.death_bb = pm.BB(b, b, w - b, h - b)
@@ -247,12 +246,16 @@ class Level:
                 return False
             else:
                 self._drawn_once = 1
-        # background
-        try:
-            img = self.game.img('bg', 'bg.png')
-        except pygame.error:
+        if conf.GRAPHICS <= conf.NO_IMAGE_THRESHOLD:
+            # background
             screen.fill(conf.BG)
+            # border
+            bounds = conf.RES
+            for a, b in self.lines:
+                pygame.draw.line(screen, conf.BORDER_COLOUR, a, b, 5)
         else:
+            # background
+            img = self.game.img('bg', 'bg.jpg')
             # tile image
             iw, ih = img.get_size()
             x = int(self.pos) % iw - iw
@@ -263,20 +266,19 @@ class Level:
                     screen.blit(img, (x, y))
                     y += ih
                 x += iw
-        # border
-        imgs = [self.game.img(ID, ID + '.png') for ID in ('border0', 'border1')]
-        bounds = conf.RES
-        for a, b in self.lines:
-            i = int(a[0] == b[0])
-            img = imgs[i]
-            size = list(img.get_size())
-            pos = list(a)
-            pos[i] = 0
-            pos[not i] -= size[not i] / 2
-            end = bounds[i]
-            while pos[i] < end:
-                screen.blit(img, pos, [0, 0] + size)
-                pos[i] += size[i]
+            # border
+            imgs = [self.game.img(ID, ID + '.png') for ID in ('border0', 'border1')]
+            bounds = conf.RES
+            for a, b in self.lines:
+                i = int(a[0] == b[0])
+                img = imgs[i]
+                size = list(img.get_size())
+                pos = list(a)
+                pos[not i] -= size[not i] / 2
+                end = bounds[i]
+                while pos[i] < b[i]:
+                    screen.blit(img, pos, [0, 0] + size)
+                    pos[i] += size[i]
         # objs
         for c in self.cars + self.objs:
             c.draw(screen)
