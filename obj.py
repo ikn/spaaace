@@ -25,9 +25,6 @@ class ObjBase:
             self.imgs = []
         self._last_angle = None
 
-    def update (self):
-        pass
-
     def draw (self, screen):
         if not self.imgs:
             pg.draw.polygon(screen, (0, 0, 0), self.shape.get_points())
@@ -83,7 +80,6 @@ class Obj (ObjBase):
         level.space.add(b, s)
 
     def update (self):
-        ObjBase.update(self)
         if not self.shape.cache_bb().intersects(self.level.outer_bb):
             self.level.space.remove(self.body, self.shape)
             return True
@@ -129,7 +125,6 @@ class Car (ObjBase):
             return True
         # move towards facing the right a bit
         self.body.angle = conf.CAR_ANGLE_RESTORATION * self.body.angle
-        ObjBase.update(self)
         # damp angular velocity
         v = self.body.angular_velocity
         f = -conf.ANGULAR_AIR_RESISTANCE * v

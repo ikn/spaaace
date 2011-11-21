@@ -87,6 +87,8 @@ weightings = {'rock0': 1, 'rock1': 1, 'rock2': 1}
 OBJS, OBJ_WEIGHTINGS = zip(*(weightings.iteritems()))
 
 GRAPHICS = .5
+HALF_FPS_THRESHOLD = .4
+THIRD_FPS_THRESHOLD = .1
 
 BG = (0, 0, 0)
 FONT = 'Chunk.otf'

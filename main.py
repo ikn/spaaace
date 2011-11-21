@@ -383,27 +383,33 @@ Only one instance of a sound will be played each frame.
         self.running = True
         stat_t = conf.FPS_STAT_TIME
         start_stat = t0 = time()
-        n = 0
+        free = n = 0
         while self.running:
-            # update
-            self._update_again = False
-            self._update()
-            if self._update_again:
+            num_updates = conf.GRAPHICS <= conf.HALF_FPS_THRESHOLD
+            num_updates += (conf.GRAPHICS <= conf.THIRD_FPS_THRESHOLD) + 1
+            for i in xrange(num_updates):
+                # update
                 self._update_again = False
                 self._update()
-            # play sounds
-            self._play_snds()
+                if self._update_again:
+                    self._update_again = False
+                    self._update()
+                # play sounds
+                self._play_snds()
             # draw
             self._draw()
             # wait
-            frame = self.backend.FRAME
+            frame = self.backend.FRAME * num_updates
             t1 = time()
-            wait(int(1000 * (frame - t1 + t0)))
-            t0 = t1
+            this_free = wait(int(1000 * (frame - t1 + t0)))
+            free += this_free
+            t0 = t1 + this_free / 1000. #wait(int(1000 * (frame - t1 + t0))) / 1000.
             n += 1
             if n >= stat_t / frame:
-                print stat_t / (frame * (t0 - start_stat))
-                n = 0
+                fps = stat_t / (frame * (t0 - start_stat))
+                free = free * frame / stat_t
+                print '{0:.2f}/{1} FPS {2:.2f}/{3:.2f} ms sleeping'.format(fps, 1 / frame, free, frame * 1000)
+                tw = n = 0
                 start_stat = t0
 
     def restart (self, *args):

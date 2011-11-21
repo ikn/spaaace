@@ -7,12 +7,13 @@ from level import Level
 
 class Title (Level):
     def __init__ (self, game, event_handler):
-        r = int(conf.FPS * .05)
+        d = int(conf.FPS * .5)
+        r = int(conf.FPS * .2)
         event_handler.add_key_handlers([
             (conf.KEYS_INCREASE, [(self.change_players, (1,))], eh.MODE_ONDOWN),
             (conf.KEYS_DECREASE, [(self.change_players, (-1,))], eh.MODE_ONDOWN),
-            (conf.KEYS_INCREASE_2, [(self.change_graphics, (1,))], eh.MODE_ONPRESS_REPEAT, r, r),
-            (conf.KEYS_DECREASE_2, [(self.change_graphics, (-1,))], eh.MODE_ONPRESS_REPEAT, r, r),
+            (conf.KEYS_INCREASE_2, [(self.change_graphics, (1,))], eh.MODE_ONPRESS_REPEAT, d, r),
+            (conf.KEYS_DECREASE_2, [(self.change_graphics, (-1,))], eh.MODE_ONPRESS_REPEAT, d, r),
             (conf.KEYS_NEXT, self.start_level, eh.MODE_ONDOWN),
             (conf.KEYS_BACK, lambda *args: game.quit_backend(), eh.MODE_ONDOWN)
         ])
@@ -28,7 +29,6 @@ class Title (Level):
         self._num_players = n
 
     def change_graphics (self, key, t, mods, d):
-        conf.GRAPHICS = max(conf.GRAPHICS + d * .02, 0)
         if t == 1:
             # key released
             self.game.play_snd('explode')
@@ -39,6 +39,8 @@ class Title (Level):
                 (conf.CAR_COLOURS[ID], conf.GRAPHICS * conf.DEATH_PARTICLES),
                 (conf.CAR_COLOURS_LIGHT[ID], conf.GRAPHICS * conf.DEATH_PARTICLES)
             )
+        else:
+            conf.GRAPHICS = round(max(conf.GRAPHICS + d * .1, 0), 1) 
 
     def start_level (self, key, t, mods):
         self.game.start_backend(Level, self._num_players)
