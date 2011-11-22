@@ -7,17 +7,23 @@ import pymunk as pm
 import conf
 
 class ObjBase:
-    def __init__ (self, level, ID, b, pos, v, pts, *img_IDs):
+    def __init__ (self, level, ID, pos, angle, v, ang_vel, pts, elast,
+                  friction, *img_IDs):
         self.level = level
-        self.ID = ID
-        if isinstance(self.ID, int):
-            self.colour = conf.CAR_COLOURS_LIGHT[self.ID]
-        else:
-            self.colour = choice((conf.OBJ_COLOUR_LIGHT, conf.OBJ_COLOUR))
-        b.position = pos
+        self.moment = pm.moment_for_poly(self.mass, pts)
+        b = self.body = pm.Body(self.mass, self.moment)
         b.velocity = v
-        if not img_IDs:
-            img_IDs = (ID,)
+        b.angle = angle
+        b.angular_velocity = ang_vel
+        s = self.shape = pm.Poly(b, pts)
+        if ID != 'car':
+            # make sure we don't start OoB (need new points after rotation)
+            new_pts = s.get_points()
+            pos = (pos[0] - min(i[0] for i in new_pts) - 1, pos[1])
+        b.position = pos
+        s.elasticity = elast
+        s.friction = friction
+        level.space.add(b, s)
         try:
             self.imgs = imgs = []
             for img_ID in img_IDs:
@@ -49,7 +55,10 @@ class ObjBase:
                 imgs = []
                 for img in self.imgs:
                     # rotate image
-                    img = pg.transform.rotozoom(img, -180 * angle / pi, 1.)
+                    if conf.GRAPHICS <= conf.UNFILTERED_ROTATE_THRESHOLD:
+                        img = pg.transform.rotate(img, -180 * angle / pi)
+                    else:
+                        img = pg.transform.rotozoom(img, -180 * angle / pi, 1)
                     if img.get_alpha() is None and img.get_colorkey() is None:
                         img = img.convert()
                     else:
@@ -71,22 +80,16 @@ class ObjBase:
 
 class Obj (ObjBase):
     def __init__ (self, level, ID, x, y, vx):
+        self.ID = ID
+        self.colour = choice((conf.OBJ_COLOUR_LIGHT, conf.OBJ_COLOUR))
         pts = conf.OBJ_SHAPES[ID]
         width, height = [max(i[j] for i in pts) - min(i[j] for i in pts) for j in (0, 1)]
         self.mass = conf.OBJ_DENSITY * (width * height) ** 1.5
-        self.moment = pm.moment_for_poly(self.mass, pts)
-        b = self.body = pm.Body(self.mass, self.moment)
         # randomise angle/vel
-        b.angle = random() * 2 * pi
-        b.angular_velocity = (random() - .5) * conf.OBJ_ANG_VEL
-        s = self.shape = pm.Poly(b, pts)
-        # make sure we don't start OoB (need new points after rotation)
-        new_pts = s.get_points()
-        x -= min(i[0] for i in new_pts) + 1
-        ObjBase.__init__(self, level, ID, b, (x, y), (vx, 0), pts)
-        s.elasticity = conf.OBJ_ELAST
-        s.friction = conf.OBJ_FRICTION
-        level.space.add(b, s)
+        angle = random() * 2 * pi
+        ang_vel = (random() - .5) * conf.OBJ_ANG_VEL
+        ObjBase.__init__(self, level, ID, (x, y), angle, (vx, 0), ang_vel, pts,
+                         conf.OBJ_ELAST, conf.OBJ_FRICTION, ID)
 
     def update (self):
         if not self.shape.cache_bb().intersects(self.level.outer_bb):
@@ -97,16 +100,13 @@ class Obj (ObjBase):
 
 class Car (ObjBase):
     def __init__ (self, level, ID, y):
+        self.ID = ID
+        self.colour = conf.CAR_COLOURS_LIGHT[self.ID]
         pts = conf.OBJ_SHAPES['car']
         self.mass = conf.CAR_MASS
-        self.moment = pm.moment_for_poly(conf.CAR_MASS, pts)
-        b = self.body = pm.Body(self.mass, self.moment)
-        s = self.shape = pm.Poly(b, pts)
         pos = (conf.RES[0] / 2, y)
-        ObjBase.__init__(self, level, ID, b, pos, (0, 0), pts, 'car' + str(ID))
-        s.elasticity = conf.CAR_ELAST
-        s.friction = conf.CAR_FRICTION
-        level.space.add(b, s)
+        ObjBase.__init__(self, level, 'car', pos, 0, (0, 0), 0, pts,
+                         conf.CAR_ELAST, conf.CAR_FRICTION, 'car' + str(ID))
 
     def move (self, k, x, mode, d):
         axis = d % 2

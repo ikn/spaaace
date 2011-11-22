@@ -9,6 +9,7 @@ import evthandler as eh
 
 import conf
 from obj import Car, Obj
+import title
 
 def col_cb (space, arbiter, level):
     if arbiter.is_first_contact:
@@ -159,7 +160,8 @@ class Level:
 
     def quit (self, *args):
         pygame.mixer.music.set_volume(conf.MUSIC_VOLUME * .01)
-        self.game.quit_backend()
+        self.game.quit_backend(no_quit = True)
+        self.game.start_backend(title.Title, self.num_cars)
 
     def update (self):
         if not self.paused:

@@ -221,12 +221,14 @@ EventHandler_instance in its event_handler attribute.
         self.backend = cls(self, event_handler, *args)
         return self.backend
 
-    def quit_backend (self, depth = 1):
+    def quit_backend (self, depth = 1, no_quit = False):
         """Quit the currently running backend.
 
-quit_backend(depth = 1)
+quit_backend(depth = 1, no_quit = False)
 
 depth: quit this many backends.
+no_quit: if True, don't quit if this is the last backend.  Only pass this if
+         you're starting another backend in the same frame.
 
 If the running backend is the last (root) one, exit the game.
 
@@ -237,7 +239,10 @@ If the running backend is the last (root) one, exit the game.
         try:
             self.backend = self.backends.pop()
         except IndexError:
-            self.quit()
+            if no_quit:
+                del self.backend
+            else:
+                self.quit()
         else:
             self.backend.dirty = True
         depth -= 1
@@ -381,7 +386,7 @@ Only one instance of a sound will be played each frame.
         """Run the backend's draw method and update the screen."""
         draw = self.backend.draw(self.screen)
         if draw is True:
-            pygame.display.update()
+            pygame.display.flip()
         elif draw:
             pygame.display.update(draw)
 

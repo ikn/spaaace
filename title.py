@@ -1,12 +1,13 @@
 from random import random, randrange
 
 import evthandler as eh
+import pygame
 
 import conf
 from level import Level
 
 class Title (Level):
-    def __init__ (self, game, event_handler):
+    def __init__ (self, game, event_handler, num_cars = 2):
         d = int(conf.FPS * .5)
         r = int(conf.FPS * .2)
         event_handler.add_key_handlers([
@@ -40,9 +41,17 @@ class Title (Level):
                 (conf.CAR_COLOURS_LIGHT[ID], conf.GRAPHICS * conf.DEATH_PARTICLES)
             )
         else:
-            conf.GRAPHICS = round(max(conf.GRAPHICS + d * .1, 0), 1) 
+            old_g = conf.GRAPHICS
+            conf.GRAPHICS = new_g = round(max(conf.GRAPHICS + d * .1, 0), 1)
+            # delete cached images if our draw methods change
+            for t in (conf.UNFILTERED_ROTATE_THRESHOLD, conf.NO_IMAGE_THRESHOLD):
+                if old_g > t and new_g <= t:
+                    g = self.game
+                    g.files = {}
+                    g.imgs = dict((k, v) for k, v in g.imgs.iteritems() if not isinstance(v, pygame.Surface))
 
     def start_level (self, key, t, mods):
+        self.game.quit_backend(no_quit = True)
         self.game.start_backend(Level, self._num_players)
 
     def draw (self, screen):
