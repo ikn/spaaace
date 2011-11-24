@@ -27,7 +27,7 @@ class ObjBase:
         try:
             self.imgs = imgs = []
             for img_ID in img_IDs:
-                imgs.append(level.game.img(img_ID, img_ID + '.png'))
+                imgs.append(level.game.img(img_ID + '.png', conf.SCALE))
             w, h = imgs[0].get_size()
             self.centre = imgs[0].get_rect().center
             self.offset = o = [-w / 2, -h / 2]
@@ -37,7 +37,8 @@ class ObjBase:
 
     def draw (self, screen):
         if conf.GRAPHICS <= conf.NO_IMAGE_THRESHOLD or not self.imgs:
-            pg.draw.polygon(screen, self.colour, self.shape.get_points())
+            pts = [x * conf.SCALE for x in self.shape.get_points()]
+            pg.draw.polygon(screen, self.colour, pts)
         else:
             angle = self.body.angle
             last = self._last_angle
@@ -48,7 +49,8 @@ class ObjBase:
                 threshold = max_t
             else:
                 threshold = min(conf.ROTATE_THRESHOLD / g ** conf.ROTATE_THRESHOLD_POWER, max_t)
-            if last is not None and abs(last - angle) < threshold:
+            angle = threshold * int(round(angle / threshold))
+            if last is not None and last == angle:
                 # retrieve
                 imgs, o = self._last_angle_data
             else:
@@ -73,6 +75,8 @@ class ObjBase:
                 # store
                 self._last_angle = angle
                 self._last_angle_data = (imgs, o)
+            p[0] *= conf.SCALE
+            p[1] *= conf.SCALE
             p[0] += o[0]
             p[1] += o[1]
             for img in imgs:
@@ -104,7 +108,7 @@ class Car (ObjBase):
         self.colour = conf.CAR_COLOURS_LIGHT[self.ID]
         pts = conf.OBJ_SHAPES['car']
         self.mass = conf.CAR_MASS
-        pos = (conf.RES[0] / 2, y)
+        pos = (conf.SIZE[0] / 2, y)
         ObjBase.__init__(self, level, 'car', pos, 0, (0, 0), 0, pts,
                          conf.CAR_ELAST, conf.CAR_FRICTION, 'car' + str(ID))
 
@@ -119,9 +123,10 @@ class Car (ObjBase):
         l = self.level
         l.game.play_snd('explode')
         p = self.body.position
-        force = conf.DEATH_PARTICLES
+        force = conf.CAR_EXPLOSION_FORCE
+        amount = conf.GRAPHICS * conf.DEATH_PARTICLES
         l.explosion_force((force, p), exclude = [self])
-        self.level.spawn_particles(p,
+        self.level.spawn_particles(p * conf.SCALE,
             (conf.CAR_COLOURS[self.ID], conf.GRAPHICS * force),
             (conf.CAR_COLOURS_LIGHT[self.ID], conf.GRAPHICS * force)
         )

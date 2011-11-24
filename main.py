@@ -269,26 +269,38 @@ inherit: also apply to all classes that inherit from the given class.
             if isinstance(backend, cls) if inherit else (backend == cls):
                 setattr(backend, attr, val)
 
-    def img (self, ID, data, size = None, text = False):
+    def convert_img (self, img):
+        """Convert an image for blitting."""
+        if img.get_alpha() is None and img.get_colorkey() is None:
+            img = img.convert()
+        else:
+            img = img.convert_alpha()
+        return img
+
+    def img (self, data, size = None):
         """Load or render an image, or retrieve it from cache.
 
-img(ID, data[, size], text = False) -> surface
+img(data[, size], text = False) -> surface
 
-ID: a string identifier unique to the expected result, ignoring size.
-data: if text is True, a tuple of args to pass to Fonts.text, else a filename
+data: if rendering text, a tuple of args to pass to Fonts.text, else a filename
       to load.
-size: if given, scale the image to this size.  Can be a rect, in which case its
-      dimension is used.  Ignored if text == True.
-text: whether the image should be rendered from a font (data is list of args to
-      pass to Font.text).  If True, returns (img, lines) like Font.text.
+size: scale the image.  Can be an (x, y) size, a rect (in which case its
+      dimension is used), or a number to scale by.  Ignored if rendering text.
 
 """
+        text = not isinstance(data, basestring)
+        if text:
+            data = tuple(tuple(x) if isinstance(x, list) else x for x in data)
         if size is not None:
-            if len(size) == 4:
-                # rect
-                size = size[2:]
-            size = tuple(size)
-        key = (ID, size)
+            try:
+                if len(size) == 4:
+                    # rect
+                    size = size[2:]
+                size = tuple(size)
+            except TypeError:
+                # number
+                pass
+        key = (data, size)
         if key in self.imgs:
             return self.imgs[key]
         got_size = size is not None and size != 1 and not text
@@ -304,24 +316,20 @@ text: whether the image should be rendered from a font (data is list of args to
                 img = pygame.image.load(conf.IMG_DIR + data)
                 # convert first if won't resize, as it'll come from here
                 if not got_size:
-                    if img.get_alpha() is None and img.get_colorkey() is None:
-                        img = img.convert()
-                    else:
-                        img = img.convert_alpha()
+                    img = self.convert_img(img)
                 self.files[data] = img
-
         # scale
         if got_size:
+            if not isinstance(size, tuple):
+                size = [int(size * x) for x in img.get_size()]
             img = pygame.transform.smoothscale(img, size)
-        else:
             # speed up blitting (if not resized, this is already done)
-            if img.get_alpha() is None and img.get_colorkey() is None:
-                img = img.convert()
-            else:
-                img = img.convert_alpha()
+            img = self.convert_img(img)
+        result = (img, lines) if text else img
+        if got_size or text:
             # add to cache (if not resized, this is in the file cache)
-            self.imgs[key] = (img, lines) if text else img
-        return (img, lines) if text else img
+            self.imgs[key] = result
+        return result
 
     def play_snd (self, ID, volume = 1):
         """Play a sound with the given ID.
@@ -415,7 +423,7 @@ Only one instance of a sound will be played each frame.
             t1 = time()
             this_free = wait(int(1000 * (frame - t1 + t0)))
             free += this_free
-            t0 = t1 + this_free / 1000. #wait(int(1000 * (frame - t1 + t0))) / 1000.
+            t0 = t1 + this_free / 1000.
             n += 1
             if n >= stat_t / frame:
                 fps = stat_t / (frame * (t0 - start_stat))

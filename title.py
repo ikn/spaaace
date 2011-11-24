@@ -20,8 +20,8 @@ class Title (Level):
         ])
         Level.__init__(self, game, event_handler, 0, False)
         self.accel = 0
-        self.scores = [0, 0]
-        self._num_players = 2
+        self.scores = [0] * num_cars
+        self._num_players = num_cars
         self.x = None
 
     def change_players (self, key, t, mods, d):
@@ -64,15 +64,15 @@ class Title (Level):
         shadow = (conf.UI_FONT_SHADOW, conf.UI_FONT_SHADOW_OFFSET)
         font_data = [font, conf.TITLE_TEXT, conf.UI_FONT_COLOUR, shadow, None, 0, False, spacing]
         # render
-        sfc1, lines = self.game.img('title', font_data, text = True)
+        sfc1, lines = self.game.img(font_data)
         font_data[1] = ' {:.1f}'.format(conf.GRAPHICS)
-        sfc2, lines = self.game.img(conf.GRAPHICS, font_data, text = True)
+        sfc2, lines = self.game.img(font_data)
         # position
         y0 = int(conf.SCORES_EDGE_PADDING[1] + conf.SCORES_FONT_SIZE)
         sw, sh = sfc1.get_size()
         total_w = sw + sfc2.get_width()
         w, h = conf.RES
-        h -= int(conf.BORDER) + y0
+        h -= int(round(conf.BORDER * conf.SCALE)) + y0
         if self.x is None:
             self.x = (w - total_w) / 2
         y = y0 + (h - sh) / 2
