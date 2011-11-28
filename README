@@ -1,5 +1,9 @@
 A game about crashing into enemies and dodging rocks.
 
+This was made for a 48-hour competition; this version has some fixes made
+afterwards, including performance improvements and the ability to freely scale
+the window, but no major changes to the gameplay or featureset.
+
     DEPENDENCIES
 
 Python (2.6 or later 2.x)
@@ -20,12 +24,14 @@ can.
 The 'graphics' control on the title screen affects the amount of particles and
 sprite rotation smoothness.
 
-Player controls:
+Controls:
 
 player 1: WASD
 player 2: arrow keys
 player 3: numpad arrow keys
 player 4: IJKL
+fullscreen: F11, alt + enter
+minimise: F10
 
     LICENSING
 

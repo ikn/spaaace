@@ -147,7 +147,7 @@ class Level:
                 r_sq = r.get_length_sqrd()
                 o.body.apply_impulse((f * o.mass / r_sq) * r.normalized())
 
-    def toggle_paused (self, key, t, mods):
+    def toggle_paused (self, *args):
         if self.paused:
             # unpause
             del self._drawn_once

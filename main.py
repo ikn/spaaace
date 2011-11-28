@@ -479,7 +479,7 @@ Only one instance of a sound will be played each frame.
 
     def minimise (self, *args):
         """Minimise the display, pausing if possible (and necessary)."""
-        if isinstance(self.backend, Level) and not self.backend.paused:
+        if isinstance(self.backend, Level) and not isinstance(self.backend, Title) and not self.backend.paused:
              self.backend.toggle_paused()
         pygame.display.iconify()
 
