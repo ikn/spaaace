@@ -12,6 +12,7 @@ if os.name == 'nt':
 import evthandler as eh
 
 from title import Title
+from level import Level
 import conf
 
 class Fonts (object):
@@ -146,6 +147,7 @@ quit
 run
 restart
 refresh_display
+toggle_fullscreen
 minimise
 
     ATTRIBUTES
@@ -210,8 +212,12 @@ EventHandler_instance in its event_handler attribute.
         # create event handler for this backend
         h = eh.MODE_HELD
         event_handler = eh.EventHandler({
+            pygame.VIDEORESIZE: self._resize_cb,
             conf.EVENT_ENDMUSIC: self.play_music
-        }, [], False, self.quit)
+        }, [
+            (conf.KEYS_FULLSCREEN, self.toggle_fullscreen, eh.MODE_ONDOWN),
+            (conf.KEYS_MINIMISE, self.minimise, eh.MODE_ONDOWN)
+        ], False, self.quit)
         # store current backend in history, if any
         try:
             self.backends.append(self.backend)
@@ -443,12 +449,22 @@ Only one instance of a sound will be played each frame.
         flags = conf.FLAGS
         if conf.FULLSCREEN:
             flags |= pygame.FULLSCREEN
-            self.res = conf.RES_F
+            r = conf.RES_F
         else:
-            self.res = (w, h) = conf.RES_W
+            r = (w, h) = conf.RES_W
+        s = conf.SIZE
+        # lock aspect ratio
+        r = list(r)
+        ratio = s[0] / s[1]
+        r[0] = min(r[0], r[1] * ratio)
+        r[1] = min(r[1], r[0] / ratio)
+        conf.RES = r
+        # set new scale
+        conf.SCALE = float(r[1]) / s[1]
+        # set mode
         if conf.RESIZABLE:
             flags |= pygame.RESIZABLE
-        self.screen = pygame.display.set_mode(self.res, flags)
+        self.screen = pygame.display.set_mode(r, flags)
         try:
             self.backend.dirty = True
         except AttributeError:
@@ -456,9 +472,21 @@ Only one instance of a sound will be played each frame.
         # clear image cache (very unlikely we'll need the same sizes)
         self.imgs = {}
 
+    def toggle_fullscreen (self, *args):
+        """Toggle fullscreen mode."""
+        conf.FULLSCREEN = not conf.FULLSCREEN
+        self.refresh_display()
+
     def minimise (self, *args):
         """Minimise the display, pausing if possible (and necessary)."""
+        if isinstance(self.backend, Level) and not self.backend.paused:
+             self.backend.toggle_paused()
         pygame.display.iconify()
+
+    def _resize_cb (self, event):
+        """Callback to handle a window resize."""
+        conf.RES_W = (event.w, event.h)
+        self.refresh_display()
 
 if __name__ == '__main__':
     if conf.WINDOW_ICON is not None:

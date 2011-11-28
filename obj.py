@@ -24,10 +24,14 @@ class ObjBase:
         s.elasticity = elast
         s.friction = friction
         level.space.add(b, s)
+        self.img_IDs = img_IDs
+        self.gen_imgs()
+
+    def gen_imgs (self):
         try:
             self.imgs = imgs = []
-            for img_ID in img_IDs:
-                imgs.append(level.game.img(img_ID + '.png', conf.SCALE))
+            for img_ID in self.img_IDs:
+                imgs.append(self.level.game.img(img_ID + '.png', conf.SCALE))
             w, h = imgs[0].get_size()
             self.centre = imgs[0].get_rect().center
             self.offset = o = [-w / 2, -h / 2]
@@ -40,6 +44,8 @@ class ObjBase:
             pts = [x * conf.SCALE for x in self.shape.get_points()]
             pg.draw.polygon(screen, self.colour, pts)
         else:
+            if self.level.dirty:
+                self.gen_imgs()
             angle = self.body.angle
             last = self._last_angle
             p = list(self.body.position)
@@ -124,11 +130,11 @@ class Car (ObjBase):
         l.game.play_snd('explode')
         p = self.body.position
         force = conf.CAR_EXPLOSION_FORCE
-        amount = conf.GRAPHICS * conf.DEATH_PARTICLES
+        amount = conf.GRAPHICS * conf.DEATH_PARTICLES * conf.SCALE
         l.explosion_force((force, p), exclude = [self])
         self.level.spawn_particles(p * conf.SCALE,
-            (conf.CAR_COLOURS[self.ID], conf.GRAPHICS * force),
-            (conf.CAR_COLOURS_LIGHT[self.ID], conf.GRAPHICS * force)
+            (conf.CAR_COLOURS[self.ID], amount),
+            (conf.CAR_COLOURS_LIGHT[self.ID], amount)
         )
         self.level.space.remove(self.body, self.shape)
 

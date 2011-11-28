@@ -8,9 +8,15 @@ import pymunk as pm
 import evthandler as eh
 
 import conf
-from conf import ir
 from obj import Car, Obj
 import title
+
+ir = lambda x: int(round(x))
+def irs (x):
+    if isinstance(x, (float, int)):
+        return ir(x * conf.SCALE)
+    else:
+        return tuple(ir(i) * conf.SCALE for i in x)
 
 def col_cb (space, arbiter, level):
     if arbiter.is_first_contact:
@@ -19,7 +25,7 @@ def col_cb (space, arbiter, level):
         f = (f[0] ** 2 + f[1] ** 2) ** .5
         level.game.play_snd('crash', f * conf.CRASH_VOLUME)
         # particles
-        amount = f * conf.GRAPHICS * conf.CRASH_PARTICLES
+        amount = f * conf.GRAPHICS * conf.CRASH_PARTICLES * conf.SCALE
         ptcls = []
         car_shapes = dict((c.shape, c.ID) for c in level.cars)
         for shape in arbiter.shapes:
@@ -51,14 +57,9 @@ class Level:
         self.scores = [0] * self.num_cars
         self.frames = 0
         # lines
-        l = self.lines = []
         b = conf.BORDER
         self.death_bb = pm.BB(b, b, pw - b, ph - b)
         self.outer_bb = pm.BB(0, 0, pw, ph)
-        b = ir(b * conf.SCALE)
-        for x0, y0, x1, y1 in ((b, 0, b, h), (0, b, w, b), (w - b, 0, w - b, h),
-                               (0, h - b, w, h - b)):
-            l.append(((x0, y0), (x1, y1)))
         # stuff
         self.objs = []
         if allow_pause:
@@ -70,6 +71,7 @@ class Level:
         self.particles = []
         self.cars = []
         self.won = None
+        self.dirty = True
         self.reset(True)
 
     def reset (self, first = False):
@@ -81,7 +83,7 @@ class Level:
                 force = conf.OBJ_EXPLOSION_FORCE * o.mass
                 p = o.body.position
                 forces.append((force, p))
-                amount = ir(conf.GRAPHICS * conf.OBJ_PARTICLES * o.mass)
+                amount = irs(conf.GRAPHICS * conf.OBJ_PARTICLES * o.mass)
                 self.spawn_particles(p * conf.SCALE, (conf.OBJ_COLOUR, amount),
                                      (conf.OBJ_COLOUR_LIGHT, amount))
                 s.remove(o.body, o.shape)
@@ -116,10 +118,10 @@ class Level:
         # colours is a list of (colour, amount) tuples
         pos = list(pos)
         ptcls = self.particles
-        max_speed = conf.PARTICLE_SPEED
-        max_speed_accel = conf.PARTICLE_SPEED_IF_ACCEL
+        max_speed = conf.PARTICLE_SPEED * conf.SCALE
+        max_speed_accel = conf.PARTICLE_SPEED_IF_ACCEL * conf.SCALE
         life = conf.PARTICLE_LIFE
-        max_size = conf.PARTICLE_SIZE
+        max_size = irs(conf.PARTICLE_SIZE)
         for c, amount in colours:
             while amount > 0:
                 size = randint(1, max_size)
@@ -154,7 +156,7 @@ class Level:
             pygame.mixer.music.set_volume(conf.MUSIC_VOLUME * .01)
         else:
             # pause
-            self._drawn_once = 0
+            self._drawn_once = False
             self.paused = True
             self.frozen = True
             pygame.mixer.music.set_volume(conf.PAUSED_MUSIC_VOLUME * .01)
@@ -178,7 +180,7 @@ class Level:
                 self.cars.remove(c)
         # update particles
         ptcls = []
-        a = conf.PARTICLE_ACCEL
+        a = conf.PARTICLE_ACCEL * conf.SCALE
         for c, p, v, ac, t, size in self.particles:
             p[0] += v[0]
             p[1] += v[1]
@@ -248,16 +250,23 @@ class Level:
 
     def draw (self, screen):
         if self.paused and not self.particles:
-            if self._drawn_once == 1:
+            if self.dirty:
+                self._drawn_once = False
+            elif self._drawn_once == True:
                 return False
             else:
-                self._drawn_once = 1
+                self._drawn_once = True
+        w, h = conf.RES
+        lines = []
+        b = irs(conf.BORDER)
+        for x0, y0, x1, y1 in ((b, 0, b, h), (0, b, w, b), (w - b, 0, w - b, h),
+                               (0, h - b, w, h - b)):
+            lines.append(((x0, y0), (x1, y1)))
         if conf.GRAPHICS <= conf.NO_IMAGE_THRESHOLD:
             # background
             screen.fill(conf.BG)
             # border
-            bounds = conf.RES
-            for a, b in self.lines:
+            for a, b in lines:
                 pygame.draw.line(screen, conf.BORDER_COLOUR, a, b, 5)
         else:
             # background
@@ -265,7 +274,6 @@ class Level:
             # tile image
             iw, ih = img.get_size()
             x = int(self.pos) % iw - iw
-            w, h = conf.RES
             while x < w:
                 y = 0
                 while y < h:
@@ -274,14 +282,13 @@ class Level:
                 x += iw
             # border
             imgs = [self.game.img(ID + '.png', conf.SCALE) for ID in ('border0', 'border1')]
-            bounds = conf.RES
-            for a, b in self.lines:
+            for a, b in lines:
                 i = int(a[0] == b[0])
                 img = imgs[i]
                 size = list(img.get_size())
                 pos = list(a)
                 pos[not i] -= size[not i] / 2
-                end = bounds[i]
+                end = conf.RES[i]
                 while pos[i] < b[i]:
                     screen.blit(img, pos, [0, 0] + size)
                     pos[i] += size[i]
@@ -292,25 +299,26 @@ class Level:
         for c, p, v, ac, t, size in self.particles:
             screen.fill(c, p + [size, size])
         # scores
-        size = conf.SCORES_FONT_SIZE
-        x, y = conf.SCORES_EDGE_PADDING
-        pad = conf.SCORES_PADDING
+        size = irs(conf.SCORES_FONT_SIZE)
+        x, y = irs(conf.SCORES_EDGE_PADDING)
+        pad = irs(conf.SCORES_PADDING)
         for i, s in enumerate(self.scores):
             s = str(s)
-            h = conf.RES[1]
             font = (conf.FONT, size, False)
             c = conf.CAR_COLOURS_LIGHT[i]
             sc = conf.CAR_COLOURS[i]
-            font_args = (font, s, c, (sc, conf.SCORES_FONT_SHADOW_OFFSET))
+            font_args = (font, s, c, (sc, irs(conf.SCORES_FONT_SHADOW_OFFSET)))
             sfc, lines = self.game.img(font_args)
             screen.blit(sfc, (x, y))
             x += sfc.get_width() + pad
         # text
         won = self.won
         if self.paused or won is not None:
-            font = (conf.FONT, conf.UI_FONT_SIZE, False)
-            shadow = [conf.UI_FONT_SHADOW, conf.UI_FONT_SHADOW_OFFSET]
-            font_data = [font, conf.PAUSE_TEXT, conf.UI_FONT_COLOUR, shadow, None, 0, False, conf.UI_FONT_SPACING]
+            font = (conf.FONT, irs(conf.UI_FONT_SIZE), False)
+            shadow_offset = irs(conf.UI_FONT_SHADOW_OFFSET)
+            shadow = [conf.UI_FONT_SHADOW, shadow_offset]
+            spacing = irs(conf.UI_FONT_SPACING)
+            font_data = [font, conf.PAUSE_TEXT, conf.UI_FONT_COLOUR, shadow, None, 0, False, spacing]
             if self.paused:
                 # pause screen text
                 ID = 'paused'
@@ -322,6 +330,7 @@ class Level:
                 font_data[3][0] = conf.CAR_COLOURS[won]
             sfc, lines = self.game.img(font_data)
             sw, sh = sfc.get_size()
-            w, h = conf.RES
             screen.blit(sfc, ((w - sw) / 2, (h - sh) / 2))
+        if self.dirty:
+            self.dirty = False
         return True

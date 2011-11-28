@@ -6,6 +6,13 @@ import pygame
 import conf
 from level import Level
 
+ir = lambda x: int(round(x))
+def irs (x):
+    if isinstance(x, (float, int)):
+        return ir(x * conf.SCALE)
+    else:
+        return tuple(ir(i) * conf.SCALE for i in x)
+
 class Title (Level):
     def __init__ (self, game, event_handler, num_cars = 2):
         d = int(conf.FPS * .5)
@@ -36,9 +43,10 @@ class Title (Level):
             ID = randrange(4)
             w, h = conf.RES
             self.particles = []
+            amount = conf.GRAPHICS * conf.DEATH_PARTICLES * conf.SCALE
             self.spawn_particles((random() * w, random() * h),
-                (conf.CAR_COLOURS[ID], conf.GRAPHICS * conf.DEATH_PARTICLES),
-                (conf.CAR_COLOURS_LIGHT[ID], conf.GRAPHICS * conf.DEATH_PARTICLES)
+                (conf.CAR_COLOURS[ID], amount),
+                (conf.CAR_COLOURS_LIGHT[ID], amount)
             )
         else:
             old_g = conf.GRAPHICS
@@ -58,17 +66,18 @@ class Title (Level):
         rtn = Level.draw(self, screen)
         # draw text
         # setup
-        size = conf.UI_FONT_SIZE
-        spacing = conf.UI_FONT_SPACING
+        size = irs(conf.UI_FONT_SIZE)
+        spacing = irs(conf.UI_FONT_SPACING)
         font = (conf.FONT, size, False)
-        shadow = (conf.UI_FONT_SHADOW, conf.UI_FONT_SHADOW_OFFSET)
+        shadow_offset = irs(conf.UI_FONT_SHADOW_OFFSET)
+        shadow = (conf.UI_FONT_SHADOW, shadow_offset)
         font_data = [font, conf.TITLE_TEXT, conf.UI_FONT_COLOUR, shadow, None, 0, False, spacing]
         # render
         sfc1, lines = self.game.img(font_data)
         font_data[1] = ' {:.1f}'.format(conf.GRAPHICS)
         sfc2, lines = self.game.img(font_data)
         # position
-        y0 = int(conf.SCORES_EDGE_PADDING[1] + conf.SCORES_FONT_SIZE)
+        y0 = int(irs(conf.SCORES_EDGE_PADDING[1]) + irs(conf.SCORES_FONT_SIZE))
         sw, sh = sfc1.get_size()
         total_w = sw + sfc2.get_width()
         w, h = conf.RES
