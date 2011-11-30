@@ -30,8 +30,8 @@ __version__ = "$Id: constraint.py 335 2011-08-28 17:19:56Z vb@viblo.se $"
 __docformat__ = "reStructuredText"
 
 import ctypes as ct
-import pymunk._chipmunk as cp 
-import pymunk._chipmunk_ffi as cpffi 
+import _chipmunk as cp 
+import _chipmunk_ffi as cpffi 
 
 class Constraint(object):
     """Base class of all constraints. 

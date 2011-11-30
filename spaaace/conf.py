@@ -10,7 +10,7 @@ LEVEL_DIR = DATA_DIR + 'lvl' + os.sep
 FONT_DIR = DATA_DIR + 'font' + os.sep
 
 WINDOW_ICON = IMG_DIR + 'icon.png'
-WINDOW_TITLE = '48-hour game'
+WINDOW_TITLE = 'Spaaace'
 RESIZABLE = True
 FULLSCREEN = False
 FLAGS = pg.DOUBLEBUF
