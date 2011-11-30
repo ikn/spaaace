@@ -4,6 +4,10 @@ This was made for a 48-hour competition; this version has some fixes made
 afterwards, including performance improvements and the ability to freely scale
 the window, but no major changes to the gameplay or featureset.
 
+Theme: cowardice.  Connection to theme: instead of racing, you're trying to
+destroy your opponents, which is in some way cowardly or something.  ...Yeah, I
+know.
+
     DEPENDENCIES
 
 Python (2.6 or later 2.x)
@@ -35,6 +39,9 @@ minimise: F10
     LICENSING
 
 Source code is available under the new BSD license (included).
+
+Images are available under the Creative Commons CC0 license:
+    https://creativecommons.org/publicdomain/zero/1.0/
 
 All audio files are available under Creative Commons licenses.  Sounds are from
 Freesound and are by:
