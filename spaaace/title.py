@@ -1,6 +1,6 @@
 from random import random, randrange
 
-import evthandler as eh
+from ext import evthandler as eh
 import pygame
 
 import conf

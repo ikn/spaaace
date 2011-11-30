@@ -11,9 +11,8 @@ Pygame (1.8 or later, probably; tested with 1.9.1)
 
     RUNNING
 
-'python main.py'
-
-Should work wherever Pygame does.
+./configure
+./run
 
     PLAYING
 

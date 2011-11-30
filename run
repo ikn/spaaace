@@ -1,3 +1,5 @@
+#! /usr/bin/python2
+
 import os
 from time import time
 from random import choice
@@ -11,9 +13,9 @@ if os.name == 'nt':
     import pygame._view
 import evthandler as eh
 
-from title import Title
-from level import Level
-import conf
+from spaaace.title import Title
+from spaaace.level import Level
+from spaaace import conf
 
 class Fonts (object):
     """Collection of pygame.font.Font instances."""

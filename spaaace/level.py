@@ -5,7 +5,7 @@ from time import time
 
 import pygame
 import pymunk as pm
-import evthandler as eh
+from ext import evthandler as eh
 
 import conf
 from obj import Car, Obj
