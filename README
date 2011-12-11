@@ -24,15 +24,18 @@ The aim of the game is to push opponents into the boundary to increase your
 score; the first to 10 wins.  In 1-player mode, just try to last as long as you
 can.
 
-The 'graphics' control on the title screen affects the amount of particles and
-sprite rotation smoothness.
+The 'graphics' control on the title screen affects the FPS, the amount of
+particles, image rotation smoothness and whether images are used.
 
 Controls:
 
-player 1: WASD
-player 2: arrow keys
-player 3: numpad arrow keys
-player 4: IJKL
+Any plugged in controllers are used to move the first players, then the
+following keyboard keys are used for players in order:
+    arrow keys
+    WASD
+    numpad arrow keys
+    IJKL
+pause: escape, start on any controller
 fullscreen: F11, alt + enter
 minimise: F10
 

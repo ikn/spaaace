@@ -109,21 +109,37 @@ class Obj (ObjBase):
             return False
 
 class Car (ObjBase):
-    def __init__ (self, level, ID, y):
+    def __init__ (self, level, ID):
         self.ID = ID
         self.colour = conf.CAR_COLOURS_LIGHT[self.ID]
         pts = conf.OBJ_SHAPES['car']
         self.mass = conf.CAR_MASS
+        y = (conf.SIZE[1] / (level.num_cars + 1)) * (ID + 1)
         pos = (conf.SIZE[0] / 2, y)
         ObjBase.__init__(self, level, 'car', pos, 0, (0, 0), 0, pts,
                          conf.CAR_ELAST, conf.CAR_FRICTION, 'car' + str(ID))
+        self.dead = False
 
-    def move (self, k, x, mode, d):
+    def spawn (self):
+        y = (conf.SIZE[1] / (self.level.num_cars + 1)) * (self.ID + 1)
+        self.body.position = (conf.SIZE[0] / 2, y)
+        self.body.angle = 0
+        self.body.velocity = (0, 0)
+        self.body.angular_velocity = 0
+        if self.dead:
+            self.level.space.add(self.body, self.shape)
+            self.dead = False
+
+    def move (self, f):
+        f = [f_i * conf.CAR_ACCEL for f_i in f]
+        self.body.apply_impulse(f, conf.CAR_FORCE_OFFSET)
+
+    def _move (self, k, x, mode, d):
         axis = d % 2
         sign = 1 if d > 1 else -1
         f = [0, 0]
-        f[axis] = sign * conf.CAR_ACCEL
-        self.body.apply_impulse(f, conf.CAR_FORCE_OFFSET)
+        f[axis] = sign
+        self.move(f)
 
     def die (self):
         l = self.level
@@ -137,6 +153,7 @@ class Car (ObjBase):
             (conf.CAR_COLOURS_LIGHT[self.ID], amount)
         )
         self.level.space.remove(self.body, self.shape)
+        self.dead = True
 
     def update (self):
         # death condition

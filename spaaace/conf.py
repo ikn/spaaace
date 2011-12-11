@@ -46,6 +46,14 @@ KEYS_INCREASE = (pg.K_RIGHT, pg.K_PLUS, pg.K_KP_PLUS)
 KEYS_DECREASE = (pg.K_LEFT, pg.K_MINUS, pg.K_KP_MINUS)
 KEYS_INCREASE_2 = (pg.K_UP,)
 KEYS_DECREASE_2 = (pg.K_DOWN,)
+JOY_CONTROLS = {
+    'Microsoft X-Box 360 pad': {
+        'move': (0, 1),
+        'pause': (0, 1, 2, 3, 7, 8),
+        'quit': (6,)
+    }
+}
+FB_JOY_CONTROLS = {'move': (0, 1), 'pause': (0,), 'quit': (1,)}
 
 EXPLOSION_FORCE = 10000
 CAR_EXPLOSION_FORCE = 2000

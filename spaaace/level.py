@@ -41,6 +41,9 @@ def col_cb (space, arbiter, level):
 class Level:
     def __init__ (self, game, event_handler, num_cars = 2, allow_pause = True):
         self.game = game
+        event_handler.add_event_handlers({
+            pygame.JOYAXISMOTION: self._joy_motion
+        })
         self.event_handler = event_handler
         self.num_cars = num_cars
         self.FRAME = conf.FRAME
@@ -63,13 +66,28 @@ class Level:
         # stuff
         self.objs = []
         if allow_pause:
+            event_handler.add_event_handlers({
+                pygame.JOYBUTTONDOWN: (self.toggle_paused, self.quit)
+            })
             event_handler.add_key_handlers([
                 (conf.KEYS_BACK + conf.KEYS_NEXT, self.toggle_paused, eh.MODE_ONDOWN),
                 (conf.KEYS_QUIT, self.quit, eh.MODE_ONDOWN)
             ])
         self.paused = False
         self.particles = []
-        self.cars = []
+        self.num_joys = min(pygame.joystick.get_count(), self.num_cars)
+        self.joys = []
+        controls = conf.JOY_CONTROLS
+        for i in xrange(self.num_joys):
+            j = pygame.joystick.Joystick(i)
+            j.init()
+            name = j.get_name()
+            if name in controls:
+                print 'found known controller: \'{0}\''.format(name)
+            else:
+                print 'found unknown controller: \'{0}\''.format(name)
+                print 'guessing a configuration'
+            self.joys.append(controls.get(name, conf.FB_JOY_CONTROLS))
         self.won = None
         self.dirty = True
         self.reset(True)
@@ -93,26 +111,42 @@ class Level:
             self.objs = []
         # objs
         if first:
+            self.create_players()
             self.spawn_players()
         self.frozen = not first
         self.freeze_end = 0 if first else conf.FREEZE_TIME
+
+    def create_players (self):
+        cs = self.all_cars = []
+        self.joy_vals = [[0, 0] for i in xrange(self.num_joys)]
+        keys = []
+        used_joys = 0
+        used_keys = 0
+        for i in xrange(self.num_cars):
+            c = Car(self, i)
+            cs.append(c)
+            # try to use controller
+            if used_joys < self.num_joys:
+                used_joys += 1
+            else:
+                for j, k in enumerate(conf.KEYS_MOVE[used_keys]):
+                    if isinstance(k, int):
+                        k = (k,)
+                    keys.append((k, [(c._move, (j,))], eh.MODE_HELD))
+                used_keys += 1
+        self.event_handler.add_key_handlers(keys)
+        self.cars = []
 
     def spawn_players (self, *ps):
         if not ps:
             IDs = [c.ID for c in self.cars]
             ps = [i for i in xrange(self.num_cars) if i not in IDs]
         cs = self.cars
-        keys = []
-        d = conf.SIZE[1] / (self.num_cars + 1)
         for i in ps:
             assert not any(c.ID == i for c in cs)
-            c = Car(self, i, d * (i + 1))
+            c = self.all_cars[i]
+            c.spawn()
             cs.append(c)
-            for j, k in enumerate(conf.KEYS_MOVE[i]):
-                if isinstance(k, int):
-                    k = (k,)
-                keys.append((k, [(c.move, (j,))], eh.MODE_HELD))
-        self.event_handler.add_key_handlers(keys)
 
     def spawn_particles (self, pos, *colours):
         # colours is a list of (colour, amount) tuples
@@ -147,7 +181,20 @@ class Level:
                 r_sq = r.get_length_sqrd()
                 o.body.apply_impulse((f * o.mass / r_sq) * r.normalized())
 
-    def toggle_paused (self, *args):
+    def _joy_motion (self, evt = None):
+        i = evt.joy
+        try:
+            axis = self.joys[i]['move'].index(evt.axis)
+        except ValueError:
+            pass
+        else:
+            self.joy_vals[i][axis] = evt.value
+
+    def toggle_paused (self, evt = None, *args):
+        if isinstance(evt, pygame.event.EventType):
+            if not (evt.type == pygame.JOYBUTTONDOWN and \
+                    evt.button in self.joys[evt.joy]['pause']):
+                return
         if self.paused:
             # unpause
             del self._drawn_once
@@ -161,13 +208,27 @@ class Level:
             self.frozen = True
             pygame.mixer.music.set_volume(conf.PAUSED_MUSIC_VOLUME * .01)
 
-    def quit (self, *args):
+    def quit (self, evt = None, *args):
+        if isinstance(evt, pygame.event.EventType):
+            if not (evt.type == pygame.JOYBUTTONDOWN and \
+                    evt.button in self.joys[evt.joy]['quit']):
+                return
+        # increase music volume again
         pygame.mixer.music.set_volume(conf.MUSIC_VOLUME * .01)
+        # uninitialise controllers
+        for i in xrange(min(self.num_joys, self.num_cars)):
+            pygame.joystick.Joystick(i).quit()
         self.game.quit_backend(no_quit = True)
         self.game.start_backend(title.Title, self.num_cars)
 
     def update (self):
         if not self.paused:
+            # move cars
+            for i, f in enumerate(self.joy_vals):
+                c = self.all_cars[i]
+                if c in self.cars:
+                    c.move(f)
+            # step physics
             self.space.step(conf.STEP)
             # move background
             self.pos += conf.BG_SPEED * self.vel * conf.STEP * conf.SCALE
@@ -204,7 +265,7 @@ class Level:
         self.frames += 1
         # add objs
         self.next_spawn -= 1
-        if self.next_spawn == 0:
+        if self.next_spawn <= 0:
             self.next_spawn = ir(conf.FPS * triangular() / (-self.vel * conf.SPAWN_RATE))
             # choose obj type
             l = conf.OBJ_WEIGHTINGS
