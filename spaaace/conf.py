@@ -53,6 +53,9 @@ JOY_CONTROLS = {
         'quit': (6,)
     }
 }
+JOY_CONTROLS['XBOX 360 For Windows (Controller)'] = \
+    JOY_CONTROLS['Microsoft X-Box 360 pad']
+
 FB_JOY_CONTROLS = {'move': (0, 1), 'pause': (0,), 'quit': (1,)}
 
 EXPLOSION_FORCE = 10000
@@ -107,8 +110,10 @@ BG = (0, 0, 0)
 BORDER_COLOUR = (255, 255, 170)
 FONT = 'Chunk.otf'
 UI_FONT_COLOUR = (200, 200, 150)
+UI_FONT_COLOUR_SEL = (255, 140, 80)
 UI_FONT_SIZE = 100
 UI_FONT_SHADOW = (50, 50, 40)
+UI_FONT_SHADOW_SEL = (75, 35, 20)
 UI_FONT_SHADOW_OFFSET = (UI_FONT_SIZE * .05,) * 2
 UI_FONT_SPACING = .2 * UI_FONT_SIZE
 SCORES_FONT_SIZE = 70
@@ -123,11 +128,7 @@ MAX_ROTATE_THRESHOLD = .1
 ROTATE_THRESHOLD = .015
 ROTATE_THRESHOLD_POWER = 1.5
 
-TITLE_TEXT = '''Enter: start
-Left/right: players
-Up/down: graphics
-Escape: quit'''
-PAUSE_TEXT = '''Paused
-Space: continue
-Q: quit'''
-WON_TEXT = 'Winner'
+TITLE_OPTIONS = (('Start', 1), ('Players: ', 2, 'players', 1, 4, 1),
+                 ('Graphics: ', 'graphics', 2, 0, None, .1), ('Quit', 1))
+PAUSE_OPTIONS = (('Paused', 0), ('Continue', 1), ('Quit', 1))
+WON_OPTIONS = (('Winner', 0),)

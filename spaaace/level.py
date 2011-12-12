@@ -190,6 +190,14 @@ class Level:
         else:
             self.joy_vals[i][axis] = evt.value
 
+    def init_opts (self, options):
+        self.options = options
+        selectable = [i for i, o in enumerate(options) if o[1] != 0]
+        self.current_opt = selectable[0] if selectable else None
+
+    def uninit_opts (self):
+        del self.options, self.current_opt
+
     def toggle_paused (self, evt = None, *args):
         if isinstance(evt, pygame.event.EventType):
             if not (evt.type == pygame.JOYBUTTONDOWN and \
@@ -198,17 +206,21 @@ class Level:
         if self.paused:
             # unpause
             del self._drawn_once
+            self.uninit_opts()
             self.paused = False
             self.frozen = False
             pygame.mixer.music.set_volume(conf.MUSIC_VOLUME * .01)
         else:
             # pause
+            self.init_opts(conf.PAUSE_OPTIONS)
             self._drawn_once = False
             self.paused = True
             self.frozen = True
             pygame.mixer.music.set_volume(conf.PAUSED_MUSIC_VOLUME * .01)
 
     def quit (self, evt = None, *args):
+        if not self.paused:
+            return
         if isinstance(evt, pygame.event.EventType):
             if not (evt.type == pygame.JOYBUTTONDOWN and \
                     evt.button in self.joys[evt.joy]['quit']):
@@ -299,6 +311,7 @@ class Level:
                     self.scores[ID] += 1
                     if self.scores[ID] == conf.TARGET_SCORE:
                         self.won = ID
+                        self.init_opts(conf.WON_OPTIONS)
                         self.won_end = conf.WON_TIME
                     else:
                         self.reset()
@@ -308,6 +321,53 @@ class Level:
             self.won_end -= 1
             if self.won_end == 0:
                 self.quit()
+
+    def draw_options (self, screen, rect, colours = (None, None, None, None),
+                      **spin_vals):
+        # setup
+        default_cs = (conf.UI_FONT_COLOUR, conf.UI_FONT_COLOUR_SEL,
+                      conf.UI_FONT_SHADOW, conf.UI_FONT_SHADOW_SEL)
+        colours = [d if c is None else c for c, d in zip(colours, default_cs)]
+        c, c_s, sc, sc_s = colours
+        size = irs(conf.UI_FONT_SIZE)
+        spacing = irs(conf.UI_FONT_SPACING)
+        font = (conf.FONT, size, False)
+        shadow_offset = irs(conf.UI_FONT_SHADOW_OFFSET)
+        shadow = [None, shadow_offset]
+        font_data = [font, None, None, shadow]
+        sfcs = []
+        # generate text
+        for i, o in enumerate(self.options):
+            # get option type and extract data
+            text, o_type = o[:2]
+            opt = True
+            spin = False
+            if o_type == 0:
+                opt = False
+            elif o_type == 2:
+                spin = True
+                ID, mn, mx, step = o[2:]
+            # set values for this option
+            sel = self.current_opt == i
+            font_data[1] = text
+            font_data[2] = c_s if sel else c
+            shadow[0] = sc_s if sel else sc
+            # render
+            sfc, lines = self.game.img(font_data)
+            if o_type == 2:
+                # render current value
+                # TODO
+                pass
+            sfcs.append(sfc)
+        # calculate positions
+        w = max(sfc.get_width() for sfc in sfcs)
+        h = size * len(sfcs) + spacing * (len(sfcs) - 1)
+        p = [rect[0] + (rect[2] - w) / 2, rect[1] + (rect[3] - h) / 2]
+        dy = spacing
+        # blit
+        for sfc in sfcs:
+            screen.blit(sfc, p)
+            p[1] += sfc.get_height() + dy
 
     def draw (self, screen):
         if self.paused and not self.particles:
@@ -375,23 +435,15 @@ class Level:
         # text
         won = self.won
         if self.paused or won is not None:
-            font = (conf.FONT, irs(conf.UI_FONT_SIZE), False)
-            shadow_offset = irs(conf.UI_FONT_SHADOW_OFFSET)
-            shadow = [conf.UI_FONT_SHADOW, shadow_offset]
-            spacing = irs(conf.UI_FONT_SPACING)
-            font_data = [font, conf.PAUSE_TEXT, conf.UI_FONT_COLOUR, shadow, None, 0, False, spacing]
+            rect = (0, 0) + tuple(conf.RES)
             if self.paused:
-                # pause screen text
-                ID = 'paused'
+                # pause text
+                self.draw_options(screen, rect)
             else:
                 # winner text
-                ID = 'won' + str(won)
-                font_data[1] = conf.WON_TEXT
-                font_data[2] = conf.CAR_COLOURS_LIGHT[won]
-                font_data[3][0] = conf.CAR_COLOURS[won]
-            sfc, lines = self.game.img(font_data)
-            sw, sh = sfc.get_size()
-            screen.blit(sfc, ((w - sw) / 2, (h - sh) / 2))
+                colours = (conf.CAR_COLOURS_LIGHT[won], None,
+                           conf.CAR_COLOURS[won], None)
+                self.draw_options(screen, rect, colours)
         if self.dirty:
             self.dirty = False
         return True

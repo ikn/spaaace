@@ -29,7 +29,7 @@ class Title (Level):
         self.accel = 0
         self.scores = [0] * num_cars
         self._num_players = num_cars
-        self.x = None
+        self.init_opts(conf.TITLE_OPTIONS)
 
     def change_players (self, key, t, mods, d):
         n = min(max(self._num_players + d, 1), 4)
@@ -64,28 +64,9 @@ class Title (Level):
 
     def draw (self, screen):
         rtn = Level.draw(self, screen)
-        # draw text
-        # setup
-        size = irs(conf.UI_FONT_SIZE)
-        spacing = irs(conf.UI_FONT_SPACING)
-        font = (conf.FONT, size, False)
-        shadow_offset = irs(conf.UI_FONT_SHADOW_OFFSET)
-        shadow = (conf.UI_FONT_SHADOW, shadow_offset)
-        font_data = [font, conf.TITLE_TEXT, conf.UI_FONT_COLOUR, shadow, None, 0, False, spacing]
-        # render
-        sfc1, lines = self.game.img(font_data)
-        font_data[1] = ' {:.1f}'.format(conf.GRAPHICS)
-        sfc2, lines = self.game.img(font_data)
-        # position
+        # draw options
         y0 = int(irs(conf.SCORES_EDGE_PADDING[1]) + irs(conf.SCORES_FONT_SIZE))
-        sw, sh = sfc1.get_size()
-        total_w = sw + sfc2.get_width()
         w, h = conf.RES
-        h -= int(round(conf.BORDER * conf.SCALE)) + y0
-        if self.x is None:
-            self.x = (w - total_w) / 2
-        y = y0 + (h - sh) / 2
-        # blit
-        screen.blit(sfc1, (self.x, y))
-        screen.blit(sfc2, (self.x + sw, y + 2 * (size + spacing)))
+        self.draw_options(screen, (0, y0, w, h - y0), players = self.num_cars,
+                          graphics = conf.GRAPHICS)
         return True or rtn

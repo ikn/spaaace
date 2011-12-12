@@ -1,4 +1,6 @@
-#! /usr/bin/python
+#! /usr/bin/python2
+
+# TODO: don't play so many sounds
 
 import os
 from time import time
@@ -11,7 +13,7 @@ pygame.init()
 if os.name == 'nt':
     # for Windows freeze support
     import pygame._view
-import evthandler as eh
+from spaaace.ext import evthandler as eh
 
 from spaaace.title import Title
 from spaaace.level import Level
