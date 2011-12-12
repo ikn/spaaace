@@ -41,22 +41,21 @@ KEYS_FULLSCREEN = (pg.K_F11, (pg.K_RETURN, pg.KMOD_ALT, True),
                    (pg.K_KP_ENTER, pg.KMOD_ALT, True))
 KEYS_NEXT = (pg.K_RETURN, pg.K_SPACE, pg.K_KP_ENTER)
 KEYS_BACK = (pg.K_ESCAPE, pg.K_BACKSPACE)
-KEYS_QUIT = (pg.K_q,)
-KEYS_INCREASE = (pg.K_RIGHT, pg.K_PLUS, pg.K_KP_PLUS)
-KEYS_DECREASE = (pg.K_LEFT, pg.K_MINUS, pg.K_KP_MINUS)
-KEYS_INCREASE_2 = (pg.K_UP,)
-KEYS_DECREASE_2 = (pg.K_DOWN,)
+JOY_START_MOVE = .6
+JOY_STOP_MOVE = .4
 JOY_CONTROLS = {
     'Microsoft X-Box 360 pad': {
         'move': (0, 1),
-        'pause': (0, 1, 2, 3, 7, 8),
-        'quit': (6,)
+        'next': (0,),
+        'back': (1, 6, 7)
     }
 }
-JOY_CONTROLS['XBOX 360 For Windows (Controller)'] = \
-    JOY_CONTROLS['Microsoft X-Box 360 pad']
-
-FB_JOY_CONTROLS = {'move': (0, 1), 'pause': (0,), 'quit': (1,)}
+JOY_CONTROLS['XBOX 360 For Windows (Controller)'] = JOY_CONTROLS['Microsoft X-Box 360 pad']
+FB_JOY_CONTROLS = {'move': (0, 1), 'next': (0,), 'back': (1,)}
+MENU_REPEAT_DELAY = .4
+MENU_REPEAT_RATE = .15
+SPIN_REPEAT_DELAY = .5
+SPIN_REPEAT_RATE = .2
 
 EXPLOSION_FORCE = 10000
 CAR_EXPLOSION_FORCE = 2000
@@ -76,7 +75,7 @@ WON_TIME = 5 * FPS
 AIR_RESISTANCE = 3
 ANGULAR_AIR_RESISTANCE = .1
 INITIAL_VEL = -1000
-TARGET_SCORE = 10
+TARGET_SCORE = 1
 
 BG_SPEED = 1 # ratio of FG speed
 SPAWN_RATE = .0004
@@ -110,10 +109,10 @@ BG = (0, 0, 0)
 BORDER_COLOUR = (255, 255, 170)
 FONT = 'Chunk.otf'
 UI_FONT_COLOUR = (200, 200, 150)
-UI_FONT_COLOUR_SEL = (255, 140, 80)
+UI_FONT_COLOUR_SEL = (140, 0, 0)
 UI_FONT_SIZE = 100
 UI_FONT_SHADOW = (50, 50, 40)
-UI_FONT_SHADOW_SEL = (75, 35, 20)
+UI_FONT_SHADOW_SEL = (76, 0, 0)
 UI_FONT_SHADOW_OFFSET = (UI_FONT_SIZE * .05,) * 2
 UI_FONT_SPACING = .2 * UI_FONT_SIZE
 SCORES_FONT_SIZE = 70
@@ -127,8 +126,3 @@ OBJ_COLOUR_LIGHT = (117, 92, 47)
 MAX_ROTATE_THRESHOLD = .1
 ROTATE_THRESHOLD = .015
 ROTATE_THRESHOLD_POWER = 1.5
-
-TITLE_OPTIONS = (('Start', 1), ('Players: ', 2, 'players', 1, 4, 1),
-                 ('Graphics: ', 'graphics', 2, 0, None, .1), ('Quit', 1))
-PAUSE_OPTIONS = (('Paused', 0), ('Continue', 1), ('Quit', 1))
-WON_OPTIONS = (('Winner', 0),)

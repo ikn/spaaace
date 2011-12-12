@@ -42,8 +42,20 @@ class Level:
     def __init__ (self, game, event_handler, num_cars = 2, allow_pause = True):
         self.game = game
         event_handler.add_event_handlers({
-            pygame.JOYAXISMOTION: self._joy_motion
+            pygame.JOYAXISMOTION: self._joy_motion,
+            pygame.JOYBUTTONDOWN: self.select
         })
+        event_handler.add_key_handlers([
+            (conf.KEYS_NEXT, self.select, eh.MODE_ONDOWN),
+        ] + [
+            (
+                (conf.KEYS_MOVE[0][i],),
+                [(lambda k, t, m, i: self.menu_move(i), (i,))],
+                eh.MODE_ONDOWN_REPEAT,
+                ir(conf.FPS * conf.MENU_REPEAT_DELAY),
+                ir(conf.FPS * conf.MENU_REPEAT_RATE)
+            ) for i in xrange(4)
+        ])
         self.event_handler = event_handler
         self.num_cars = num_cars
         self.FRAME = conf.FRAME
@@ -67,29 +79,32 @@ class Level:
         self.objs = []
         if allow_pause:
             event_handler.add_event_handlers({
-                pygame.JOYBUTTONDOWN: (self.toggle_paused, self.quit)
+                pygame.JOYBUTTONDOWN: self.toggle_paused,
             })
             event_handler.add_key_handlers([
-                (conf.KEYS_BACK + conf.KEYS_NEXT, self.toggle_paused, eh.MODE_ONDOWN),
-                (conf.KEYS_QUIT, self.quit, eh.MODE_ONDOWN)
+                (conf.KEYS_BACK, self.toggle_paused, eh.MODE_ONDOWN)
             ])
         self.paused = False
         self.particles = []
-        self.num_joys = min(pygame.joystick.get_count(), self.num_cars)
+        num_joys = pygame.joystick.get_count()
+        self.num_joys = min(num_joys, self.num_cars)
         self.joys = []
         controls = conf.JOY_CONTROLS
-        for i in xrange(self.num_joys):
+        for i in xrange(min(num_joys, max(self.num_cars, 1))):
             j = pygame.joystick.Joystick(i)
             j.init()
             name = j.get_name()
-            if name in controls:
-                print 'found known controller: \'{0}\''.format(name)
-            else:
-                print 'found unknown controller: \'{0}\''.format(name)
-                print 'guessing a configuration'
             self.joys.append(controls.get(name, conf.FB_JOY_CONTROLS))
         self.won = None
         self.dirty = True
+        self.options = None
+        self.pause_options = (
+            ('Paused', 0),
+            ('Continue', 1, self.unpause),
+            ('Quit', 1, self.quit)
+        )
+        self._menu_moved = [0, 0]
+        self.won_options = (('Winner', 0),)
         self.reset(True)
 
     def reset (self, first = False):
@@ -181,6 +196,49 @@ class Level:
                 r_sq = r.get_length_sqrd()
                 o.body.apply_impulse((f * o.mass / r_sq) * r.normalized())
 
+    def menu_move (self, d = None, axis = None, sign = None):
+        if self.options is None or self.current_opt is None:
+            return
+        if axis is None:
+            axis = d % 2
+            sign = 1 if d > 1 else -1
+        if axis == 0:
+            # spin
+            o = self.options[self.current_opt]
+            if o[1] != 2:
+                # not a spin option
+                return
+            v, mn, mx, step = o[2:6]
+            v += sign * step
+            if mx is not None:
+                v = min(v, mx)
+            if mn is not None:
+                v = max(v, mn)
+            o[2] = v
+            # call callback
+            o[7](sign, *o[8:])
+        else:
+            # move selection
+            sels = self.selectable_opts
+            i = sels.index(self.current_opt)
+            i += sign
+            i %= len(sels)
+            self.current_opt = sels[i]
+        if self.paused:
+            self._drawn_once = False
+
+    def select (self, evt = None, *args):
+        if isinstance(evt, pygame.event.EventType):
+            if not (evt.type == pygame.JOYBUTTONDOWN and \
+                    evt.button in self.joys[evt.joy]['next']):
+                return
+        if self.options is None or self.current_opt is None:
+            return
+        o = self.options[self.current_opt]
+        if o[1] == 1:
+            o[2](*o[3:])
+        # else not a button
+
     def _joy_motion (self, evt = None):
         i = evt.joy
         try:
@@ -188,48 +246,59 @@ class Level:
         except ValueError:
             pass
         else:
-            self.joy_vals[i][axis] = evt.value
+            v = evt.value
+            if i == 0:
+                m = self._menu_moved
+                if m[axis]:
+                    if abs(v) < conf.JOY_STOP_MOVE:
+                        m[axis] = 0
+                elif abs(v) > conf.JOY_START_MOVE:
+                    m[axis] = 1
+                    self.menu_move(None, axis, 1 if v > 0 else -1)
+            if i < self.num_joys:
+                self.joy_vals[i][axis] = v
 
     def init_opts (self, options):
-        self.options = options
+        self.options = [list(o) for o in options]
         selectable = [i for i, o in enumerate(options) if o[1] != 0]
         self.current_opt = selectable[0] if selectable else None
+        self.selectable_opts = selectable
 
     def uninit_opts (self):
-        del self.options, self.current_opt
+        self.options = None
+        del self.current_opt
 
-    def toggle_paused (self, evt = None, *args):
-        if isinstance(evt, pygame.event.EventType):
-            if not (evt.type == pygame.JOYBUTTONDOWN and \
-                    evt.button in self.joys[evt.joy]['pause']):
-                return
-        if self.paused:
-            # unpause
-            del self._drawn_once
-            self.uninit_opts()
-            self.paused = False
-            self.frozen = False
-            pygame.mixer.music.set_volume(conf.MUSIC_VOLUME * .01)
-        else:
-            # pause
-            self.init_opts(conf.PAUSE_OPTIONS)
+    def pause (self, evt = None, *args):
+        if not self.paused and self.won is None:
+            self.init_opts(self.pause_options)
             self._drawn_once = False
             self.paused = True
             self.frozen = True
             pygame.mixer.music.set_volume(conf.PAUSED_MUSIC_VOLUME * .01)
 
-    def quit (self, evt = None, *args):
-        if not self.paused:
-            return
+    def unpause (self, *args):
+        if self.paused:
+            del self._drawn_once
+            self.uninit_opts()
+            self.paused = False
+            self.frozen = False
+            pygame.mixer.music.set_volume(conf.MUSIC_VOLUME * .01)
+
+    def toggle_paused (self, evt = None, *args):
         if isinstance(evt, pygame.event.EventType):
             if not (evt.type == pygame.JOYBUTTONDOWN and \
-                    evt.button in self.joys[evt.joy]['quit']):
+                    evt.button in self.joys[evt.joy]['back']):
                 return
+        if self.paused:
+            self.unpause()
+        else:
+            self.pause()
+
+    def quit (self, *args):
+        if not self.paused and self.won is None:
+            return
         # increase music volume again
         pygame.mixer.music.set_volume(conf.MUSIC_VOLUME * .01)
-        # uninitialise controllers
-        for i in xrange(min(self.num_joys, self.num_cars)):
-            pygame.joystick.Joystick(i).quit()
         self.game.quit_backend(no_quit = True)
         self.game.start_backend(title.Title, self.num_cars)
 
@@ -311,7 +380,7 @@ class Level:
                     self.scores[ID] += 1
                     if self.scores[ID] == conf.TARGET_SCORE:
                         self.won = ID
-                        self.init_opts(conf.WON_OPTIONS)
+                        self.init_opts(self.won_options)
                         self.won_end = conf.WON_TIME
                     else:
                         self.reset()
@@ -337,6 +406,7 @@ class Level:
         font_data = [font, None, None, shadow]
         sfcs = []
         # generate text
+        w = 0
         for i, o in enumerate(self.options):
             # get option type and extract data
             text, o_type = o[:2]
@@ -346,7 +416,7 @@ class Level:
                 opt = False
             elif o_type == 2:
                 spin = True
-                ID, mn, mx, step = o[2:]
+                v, mn, mx, step, fmt = o[2:7]
             # set values for this option
             sel = self.current_opt == i
             font_data[1] = text
@@ -356,18 +426,25 @@ class Level:
             sfc, lines = self.game.img(font_data)
             if o_type == 2:
                 # render current value
-                # TODO
-                pass
+                font_data[1] = fmt.format(v)
+                sfc2, lines = self.game.img(font_data)
+                w = max(w, sfc.get_width(), sfc2.get_width())
+                sfc = (sfc, sfc2)
+            else:
+                w = max(w, sfc.get_width())
             sfcs.append(sfc)
         # calculate positions
-        w = max(sfc.get_width() for sfc in sfcs)
         h = size * len(sfcs) + spacing * (len(sfcs) - 1)
         p = [rect[0] + (rect[2] - w) / 2, rect[1] + (rect[3] - h) / 2]
         dy = spacing
         # blit
         for sfc in sfcs:
-            screen.blit(sfc, p)
-            p[1] += sfc.get_height() + dy
+            if isinstance(sfc, tuple):
+                screen.blit(sfc[0], p)
+                screen.blit(sfc[1], (p[0] + sfc[0].get_width(), p[1]))
+            else:
+                screen.blit(sfc, p)
+            p[1] += size + dy
 
     def draw (self, screen):
         if self.paused and not self.particles:

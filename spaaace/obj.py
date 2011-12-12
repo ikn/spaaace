@@ -133,8 +133,9 @@ class Car (ObjBase):
             self.dead = False
 
     def move (self, f):
-        f = [f_i * conf.CAR_ACCEL for f_i in f]
-        self.body.apply_impulse(f, conf.CAR_FORCE_OFFSET)
+        if not self.level.paused:
+            f = [f_i * conf.CAR_ACCEL for f_i in f]
+            self.body.apply_impulse(f, conf.CAR_FORCE_OFFSET)
 
     def _move (self, k, x, mode, d):
         axis = d % 2
