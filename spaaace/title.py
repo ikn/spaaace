@@ -37,12 +37,17 @@ class Title (Level):
     def change_graphics (self, d):
         old_g = conf.GRAPHICS
         conf.GRAPHICS = new_g = round(max(conf.GRAPHICS + d * .1, 0), 1)
+        if old_g == new_g:
+            return
         # delete cached images if our draw methods change
         for t in (conf.UNFILTERED_ROTATE_THRESHOLD, conf.NO_IMAGE_THRESHOLD):
             if old_g > t and new_g <= t:
                 g = self.game
                 g.files = {}
                 g.imgs = dict((k, v) for k, v in g.imgs.iteritems() if not isinstance(v, pygame.Surface))
+        # change number of sound channels
+        max_snds = ir(conf.BASE_SIMUL_SNDS + conf.EXTRA_SIMUL_SNDS * conf.GRAPHICS) * len(conf.SOUNDS)
+        pygame.mixer.set_num_channels(max_snds)
         # show explosion
         self.game.play_snd('explode')
         ID = randrange(4)

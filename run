@@ -1,7 +1,5 @@
 #! /usr/bin/python
 
-# TODO: don't play so many sounds
-
 import os
 from time import time
 from random import choice
@@ -10,7 +8,6 @@ import pygame
 from pygame.time import wait
 pygame.mixer.pre_init(buffer = 1024)
 pygame.init()
-pygame.mixer.set_num_channels(32)
 if os.name == 'nt':
     # for Windows freeze support
     import pygame._view
@@ -19,6 +16,8 @@ from spaaace.ext import evthandler as eh
 from spaaace.title import Title
 from spaaace.level import Level
 from spaaace import conf
+max_snds = (conf.BASE_SIMUL_SNDS + conf.EXTRA_SIMUL_SNDS * conf.GRAPHICS) * len(conf.SOUNDS)
+pygame.mixer.set_num_channels(int(round(max_snds)))
 
 class Fonts (object):
     """Collection of pygame.font.Font instances."""
@@ -181,6 +180,7 @@ backends: a list of previous (nested) backends, most 'recent' last.
         self.imgs = {}
         self.files = {}
         self.sounds = []
+        self.current_snds = {}
         # start playing music
         pygame.mixer.music.set_volume(conf.MUSIC_VOLUME * .01)
         pygame.mixer.music.set_endevent(conf.EVENT_ENDMUSIC)
@@ -350,31 +350,57 @@ size: scale the image.  Can be an (x, y) size, a rect (in which case its
             self.imgs[key] = result
         return result
 
-    def play_snd (self, ID, volume = 1):
+    def play_snd (self, base_ID, volume = 1):
         """Play a sound with the given ID.
 
 Only one instance of a sound will be played each frame.
 
 """
-        IDs = [ID + str(i) for i in xrange(conf.SOUNDS[ID])]
+        IDs = [base_ID + str(i) for i in xrange(conf.SOUNDS[base_ID])]
         ID = choice(IDs)
         # load sound
         try:
             snd = conf.SOUND_DIR + ID + '.ogg'
             snd = pygame.mixer.Sound(snd)
-            if snd.get_length() < 10 ** -3:
+        except KeyError:
+            pass # just don't play the sound if it's not registered
+        else:
+            l = snd.get_length()
+            if l < 10 ** -3:
                 # no way this is valid
                 return
-        except KeyError:
-            return # just don't play the sound if it's not registered
-        snd.set_volume(conf.SOUND_VOLUME * volume * .01)
-        self.sounds.append(snd)
+            try:
+                current = self.current_snds[base_ID]
+            except KeyError:
+                self.current_snds[base_ID] = current = []
+            else:
+                max_snds = int(round(conf.BASE_SIMUL_SNDS + conf.GRAPHICS * conf.EXTRA_SIMUL_SNDS))
+                if current and len(current) >= max_snds:
+                    # playing too many: stop the oldest
+                    current[0][0].stop()
+                    current.pop(0)
+            snd.set_volume(conf.SOUND_VOLUME * volume * .01)
+            self.sounds.append(snd)
+            # add to currently playing
+            l = int(round(l * conf.FPS))
+            if l > 0:
+                current.append([snd, l])
 
     def _play_snds (self):
         """Play queued up sounds for this frame."""
+        # play new sounds
         for snd in self.sounds:
             snd.play()
         self.sounds = []
+        # purge finished sounds
+        for snds in self.current_snds.itervalues():
+            i = 0
+            while i < len(snds):
+                snds[i][1] -= 1
+                if snds[i][1] == 0:
+                    snds.pop(i)
+                else:
+                    i += 1
 
     def find_music (self):
         """Store a list of music files."""

@@ -6,8 +6,6 @@ import pymunk as pm
 
 import conf
 
-# TODO: only move cars once per frame
-
 class ObjBase:
     def __init__ (self, level, ID, pos, angle, v, ang_vel, pts, elast,
                   friction, *img_IDs):
