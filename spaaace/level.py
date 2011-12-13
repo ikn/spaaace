@@ -31,6 +31,7 @@ def col_cb (space, arbiter, level):
         for shape in arbiter.shapes:
             if shape in car_shapes:
                 ID = car_shapes[shape]
+                level.all_cars[ID].damage(f)
                 ptcls.append((conf.CAR_COLOURS[ID], amount))
                 ptcls.append((conf.CAR_COLOURS_LIGHT[ID], amount))
             else:

@@ -6,6 +6,10 @@ import pymunk as pm
 
 import conf
 
+# TODO:
+# - adjust health
+# - health indicator (different images?)
+
 class ObjBase:
     def __init__ (self, level, ID, pos, angle, v, ang_vel, pts, elast,
                   friction, *img_IDs):
@@ -119,6 +123,8 @@ class Car (ObjBase):
         ObjBase.__init__(self, level, 'car', pos, 0, (0, 0), 0, pts,
                          conf.CAR_ELAST, conf.CAR_FRICTION, 'car' + str(ID))
         self.dead = False
+        self.dying = False
+        self.health = conf.CAR_HEALTH
 
     def spawn (self):
         y = (conf.SIZE[1] / (self.level.num_cars + 1)) * (self.ID + 1)
@@ -129,6 +135,8 @@ class Car (ObjBase):
         if self.dead:
             self.level.space.add(self.body, self.shape)
             self.dead = False
+        self.dying = False
+        self.health = conf.CAR_HEALTH
 
     def move (self, f):
         if not self.level.paused:
@@ -141,6 +149,12 @@ class Car (ObjBase):
         f = [0, 0]
         f[axis] = sign
         self.move(f)
+
+    def damage (self, amount):
+        self.health -= amount
+        print self.health
+        if self.health <= 0:
+            self.dying = True
 
     def die (self):
         l = self.level
@@ -158,7 +172,7 @@ class Car (ObjBase):
 
     def update (self):
         # death condition
-        if not self.level.death_bb.contains_vect(self.body.position):
+        if not self.level.death_bb.contains_vect(self.body.position) or self.dying:
             self.die()
             return True
         # move towards facing the right a bit
