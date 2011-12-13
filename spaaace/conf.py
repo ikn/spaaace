@@ -82,7 +82,6 @@ TARGET_SCORE = 10
 BG_SPEED = 1 # ratio of FG speed
 SPAWN_RATE = .0004
 LEVEL_ACCEL = .5
-CAR_HEALTH = 1000000
 CAR_MASS = 50
 CAR_ELAST = 1.7
 OBJ_ELAST = .3
@@ -101,6 +100,9 @@ OBJ_SHAPES = {
 }
 weightings = {'rock0': 1, 'rock1': 1, 'rock2': 1}
 OBJS, OBJ_WEIGHTINGS = zip(*(weightings.iteritems()))
+
+CAR_HEALTH = 1000000
+CAR_DAMAGE_STEPS = [x * CAR_HEALTH for x in (.75, .5, .25)]
 
 GRAPHICS = 1
 UNFILTERED_ROTATE_THRESHOLD = .8

@@ -7,8 +7,8 @@ import pymunk as pm
 import conf
 
 # TODO:
-# - adjust health
-# - health indicator (different images?)
+# - adjust default health
+# - health option
 
 class ObjBase:
     def __init__ (self, level, ID, pos, angle, v, ang_vel, pts, elast,
@@ -29,6 +29,7 @@ class ObjBase:
         s.friction = friction
         level.space.add(b, s)
         self.img_IDs = img_IDs
+        self.current_img = 0
         self.gen_imgs()
 
     def gen_imgs (self):
@@ -42,6 +43,14 @@ class ObjBase:
         except pg.error:
             self.imgs = []
         self._last_angle = None
+
+    def set_img (self, i):
+        self.current_img = i
+        try:
+            if self._last_angle_data is not None:
+                self._last_angle_data[0] = None
+        except AttributeError:
+            pass
 
     def draw (self, screen):
         if conf.GRAPHICS <= conf.NO_IMAGE_THRESHOLD or not self.imgs:
@@ -60,37 +69,39 @@ class ObjBase:
             else:
                 threshold = min(conf.ROTATE_THRESHOLD / g ** conf.ROTATE_THRESHOLD_POWER, max_t)
             angle = threshold * int(round(angle / threshold))
-            if last is not None and last == angle:
+            if last == angle:
                 # retrieve
-                imgs, o = self._last_angle_data
+                img, o = self._last_angle_data
             else:
-                imgs = []
-                for img in self.imgs:
-                    # rotate image
-                    if conf.GRAPHICS <= conf.UNFILTERED_ROTATE_THRESHOLD:
-                        img = pg.transform.rotate(img, -180 * angle / pi)
-                    else:
-                        img = pg.transform.rotozoom(img, -180 * angle / pi, 1)
-                    if img.get_alpha() is None and img.get_colorkey() is None:
-                        img = img.convert()
-                    else:
-                        img = img.convert_alpha()
-                    imgs.append(img)
+                img = None
+                o = None
+            if img is None:
+                img = self.imgs[self.current_img]
+                # rotate image
+                if conf.GRAPHICS <= conf.UNFILTERED_ROTATE_THRESHOLD:
+                    img = pg.transform.rotate(img, -180 * angle / pi)
+                else:
+                    img = pg.transform.rotozoom(img, -180 * angle / pi, 1)
+                if img.get_alpha() is None and img.get_colorkey() is None:
+                    img = img.convert()
+                else:
+                    img = img.convert_alpha()
+            if o is None:
                 # get offset
                 o = list(self.offset)
-                rect = imgs[0].get_rect()
+                rect = img.get_rect()
                 new_c = rect.center
                 o[0] += self.centre[0] - new_c[0]
                 o[1] += self.centre[1] - new_c[1]
+            if last != angle:
                 # store
                 self._last_angle = angle
-                self._last_angle_data = (imgs, o)
+                self._last_angle_data = [img, o]
             p[0] *= conf.SCALE
             p[1] *= conf.SCALE
             p[0] += o[0]
             p[1] += o[1]
-            for img in imgs:
-                screen.blit(img, p)
+            screen.blit(img, p)
 
 class Obj (ObjBase):
     def __init__ (self, level, ID, x, y, vx):
@@ -121,7 +132,8 @@ class Car (ObjBase):
         y = (conf.SIZE[1] / (level.num_cars + 1)) * (ID + 1)
         pos = (conf.SIZE[0] / 2, y)
         ObjBase.__init__(self, level, 'car', pos, 0, (0, 0), 0, pts,
-                         conf.CAR_ELAST, conf.CAR_FRICTION, 'car' + str(ID))
+                         conf.CAR_ELAST, conf.CAR_FRICTION,
+                         *('car{0}-{1}'.format(ID, i) for i in xrange(4)))
         self.dead = False
         self.dying = False
         self.health = conf.CAR_HEALTH
@@ -137,6 +149,7 @@ class Car (ObjBase):
             self.dead = False
         self.dying = False
         self.health = conf.CAR_HEALTH
+        self.set_img(0)
 
     def move (self, f):
         if not self.level.paused:
@@ -151,9 +164,13 @@ class Car (ObjBase):
         self.move(f)
 
     def damage (self, amount):
+        old = self.health
         self.health -= amount
-        print self.health
-        if self.health <= 0:
+        new = self.health
+        for i, x in enumerate(conf.CAR_DAMAGE_STEPS):
+            if old > x and new <= x:
+                self.set_img(i + 1)
+        if new <= 0:
             self.dying = True
 
     def die (self):

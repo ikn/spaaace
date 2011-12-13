@@ -1,8 +1,8 @@
 A game about crashing into enemies and dodging rocks.
 
-This was made for a 48-hour competition; this version has some fixes made
-afterwards, including performance improvements and the ability to freely scale
-the window, but no major changes to the gameplay or featureset.
+This was made for a 48-hour competition; this version has some changes made
+afterwards, including performance improvements, the ability to freely scale
+the window, better menus, controller support, crash damage and powerups.
 
 Theme: cowardice.  Connection to theme: instead of racing, you're trying to
 destroy your opponents, which is in some way cowardly or something.  ...Yeah, I
@@ -25,19 +25,39 @@ score; the first to 10 wins.  In 1-player mode, just try to last as long as you
 can.
 
 The 'graphics' control on the title screen affects the FPS, the amount of
-particles, image rotation smoothness and whether images are used.
+particles, image rotation smoothness, whether images are used, and the number
+of sounds playing simultaneously.
 
-Controls:
+    CONTROLS
 
-Any plugged in controllers are used to move the first players, then the
-following keyboard keys are used for players in order:
-    arrow keys
-    WASD
-    numpad arrow keys
-    IJKL
+        INTERFACE
+
+Keyboard:
+
 pause: escape, start on any controller
 fullscreen: F11, alt + enter
 minimise: F10
+
+Xbox 360 controller (any plugged in controllers work):
+
+A: select option in menus
+B, start, back: pause/unpause, quit on main menu
+left analogue stick: up/down: choose option in menus
+                     left/right: alter selected option
+
+Other controllers should work too: one button will act as A above, one as B
+above, and a D-pad, analogue stick or pair of triggers as the left analogue
+stick above.
+
+        PLAYERS
+
+Any plugged in controllers are used to move the first players, then the
+following keyboard keys are used for players in order:
+
+arrow keys
+WASD
+numpad arrow keys
+IJKL
 
     LICENSING
 
