@@ -26,6 +26,7 @@ class Title (Level):
             ('Start', 1, self.start_level),
             ('Players: ', 2, self._num_players, 1, 4, 1, '{0}', self.change_players),
             ('Graphics: ', 2, conf.GRAPHICS, 0, None, .1, '{0:.1f}', self.change_graphics),
+            ('Health: ', 2, conf.CAR_HEALTH_MULTIPLIER, 0, None, .1, '{0:.1f}', self.change_health),
             ('Quit', 1, self.game.quit_backend)
         ))
 
@@ -36,7 +37,7 @@ class Title (Level):
 
     def change_graphics (self, d):
         old_g = conf.GRAPHICS
-        conf.GRAPHICS = new_g = round(max(conf.GRAPHICS + d * .1, 0), 1)
+        conf.GRAPHICS = new_g = round(max(conf.GRAPHICS + d, 0), 1)
         if old_g == new_g:
             return
         # delete cached images if our draw methods change
@@ -58,6 +59,9 @@ class Title (Level):
             (conf.CAR_COLOURS[ID], amount),
             (conf.CAR_COLOURS_LIGHT[ID], amount)
         )
+
+    def change_health (self, d):
+        conf.CAR_HEALTH_MULTIPLIER += d
 
     def start_level (self):
         self.game.quit_backend(no_quit = True)

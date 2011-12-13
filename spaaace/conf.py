@@ -35,7 +35,7 @@ EXTRA_SIMUL_SNDS = 5
 KEYS_MOVE = (
     (pg.K_LEFT, pg.K_UP, pg.K_RIGHT, pg.K_DOWN),
     (pg.K_a, (pg.K_w, pg.K_COMMA), (pg.K_d, pg.K_e), (pg.K_s, pg.K_o)),
-    (pg.K_KP4, pg.K_KP8, pg.K_KP6, pg.K_KP2),
+    (pg.K_KP4, pg.K_KP8, pg.K_KP6, pg.K_KP5),
     ((pg.K_j, pg.K_h), (pg.K_i, pg.K_c), (pg.K_l, pg.K_n), (pg.K_k, pg.K_t))
 )
 KEYS_MINIMISE = (pg.K_F10,)
@@ -56,8 +56,6 @@ JOY_CONTROLS['XBOX 360 For Windows (Controller)'] = JOY_CONTROLS['Microsoft X-Bo
 FB_JOY_CONTROLS = {'move': (0, 1), 'next': (0,), 'back': (1,)}
 MENU_REPEAT_DELAY = .4
 MENU_REPEAT_RATE = .15
-SPIN_REPEAT_DELAY = .5
-SPIN_REPEAT_RATE = .2
 
 EXPLOSION_FORCE = 10000
 CAR_EXPLOSION_FORCE = 2000
@@ -101,8 +99,9 @@ OBJ_SHAPES = {
 weightings = {'rock0': 1, 'rock1': 1, 'rock2': 1}
 OBJS, OBJ_WEIGHTINGS = zip(*(weightings.iteritems()))
 
-CAR_HEALTH = 1000000
-CAR_DAMAGE_STEPS = [x * CAR_HEALTH for x in (.75, .5, .25)]
+CAR_HEALTH_BASE = 1000000
+CAR_HEALTH_MULTIPLIER = 1.
+CAR_DAMAGE_STEPS = (.75, .5, .25)
 
 GRAPHICS = 1
 UNFILTERED_ROTATE_THRESHOLD = .8

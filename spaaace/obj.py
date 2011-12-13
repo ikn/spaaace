@@ -8,7 +8,6 @@ import conf
 
 # TODO:
 # - adjust default health
-# - health option
 
 class ObjBase:
     def __init__ (self, level, ID, pos, angle, v, ang_vel, pts, elast,
@@ -136,7 +135,7 @@ class Car (ObjBase):
                          *('car{0}-{1}'.format(ID, i) for i in xrange(4)))
         self.dead = False
         self.dying = False
-        self.health = conf.CAR_HEALTH
+        self.health = self.max_health = conf.CAR_HEALTH_BASE * conf.CAR_HEALTH_MULTIPLIER
 
     def spawn (self):
         y = (conf.SIZE[1] / (self.level.num_cars + 1)) * (self.ID + 1)
@@ -148,7 +147,7 @@ class Car (ObjBase):
             self.level.space.add(self.body, self.shape)
             self.dead = False
         self.dying = False
-        self.health = conf.CAR_HEALTH
+        self.health = self.max_health
         self.set_img(0)
 
     def move (self, f):
@@ -167,8 +166,9 @@ class Car (ObjBase):
         old = self.health
         self.health -= amount
         new = self.health
+        mx = self.max_health
         for i, x in enumerate(conf.CAR_DAMAGE_STEPS):
-            if old > x and new <= x:
+            if old > x * mx and new <= x * mx:
                 self.set_img(i + 1)
         if new <= 0:
             self.dying = True

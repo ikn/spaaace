@@ -217,7 +217,7 @@ class Level:
                 v = max(v, mn)
             o[2] = v
             # call callback
-            o[7](sign, *o[8:])
+            o[7](sign * step, *o[8:])
         else:
             # move selection
             sels = self.selectable_opts
