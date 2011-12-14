@@ -169,25 +169,35 @@ class Car (ObjBase):
         f[axis] = sign
         self.move(f)
 
+    def update_img (self):
+        h = self.health
+        steps = conf.CAR_DAMAGE_STEPS + (0,)
+        mx = self.max_health
+        i = steps.index(max(x for x in steps if h > x * mx))
+        if i != self.current_img:
+            self.set_img(i)
+
     def damage (self, amount):
         if not conf.CAR_HEALTH_ON or self.invincible:
             return
-        old = self.health
         self.health -= amount
-        new = self.health
         mx = self.max_health
-        for i, x in enumerate(conf.CAR_DAMAGE_STEPS):
-            if old > x * mx and new <= x * mx:
-                self.set_img(i + 1)
-        if new <= 0:
+        if self.health <= 0:
             self.dying = True
+        else:
+            self.update_img()
+
+    def heal (self, amount):
+        self.health = min(self.health + amount, self.max_health)
+        self.update_img()
 
     def powerup (self, p):
         self.level.game.play_snd('powerup')
         if p in self.powerups:
             self.powerups[p] += conf.POWERUP_TIME[p]
         else:
-            self.powerups[p] = conf.POWERUP_TIME[p]
+            if p != 'health':
+                self.powerups[p] = conf.POWERUP_TIME[p]
             # add effects
             if p == 'invincible':
                 self.invincible = True
@@ -197,6 +207,8 @@ class Car (ObjBase):
                 self.force_multiplier = conf.HEAVY_MULTIPLIER
             elif p == 'fast':
                 self.power_multiplier = conf.FAST_MULTIPLIER
+            elif p == 'health':
+                self.heal(conf.HEALTH_INCREASE * self.max_health)
 
     def end_powerup (self, p):
         self.level.game.play_snd('powerdown')
@@ -289,7 +301,8 @@ class Powerup:
         p = self.body.position
         amount = conf.GRAPHICS * conf.POWERUP_PARTICLES * conf.SCALE
         self.level.spawn_particles(p * conf.SCALE,
-            (conf.POWERUP_COLOURS[self.ID], amount)
+            (conf.POWERUP_COLOURS[self.ID], amount),
+            (conf.POWERUP_COLOURS_LIGHT[self.ID], amount)
         )
         self.dying = True
 
@@ -304,7 +317,7 @@ class Powerup:
         p = [int(round(x * conf.SCALE)) for x in self.body.position]
         if conf.GRAPHICS <= conf.NO_IMAGE_THRESHOLD or self.img is None:
             r = int(round(conf.POWERUP_SIZE * conf.SCALE))
-            pg.draw.circle(screen, conf.POWERUP_COLOURS[self.ID], p, r)
+            pg.draw.circle(screen, conf.POWERUP_COLOURS_LIGHT[self.ID], p, r)
         else:
             if self.level.dirty:
                 self.gen_img()
