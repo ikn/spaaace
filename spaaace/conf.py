@@ -2,6 +2,8 @@ import os
 
 import pygame as pg
 
+# TODO: adjust powerup frequency, durations, weightings, images, multipliers
+
 DATA_DIR = ''
 IMG_DIR = DATA_DIR + 'img' + os.sep
 SOUND_DIR = DATA_DIR + 'sound' + os.sep
@@ -28,7 +30,8 @@ PAUSED_MUSIC_VOLUME = 10
 SOUND_VOLUME = 70
 EVENT_ENDMUSIC = pg.USEREVENT
 CRASH_VOLUME = .0000025
-SOUNDS = {'crash': 2, 'explode': 7}
+SOUNDS = {'crash': 2, 'explode': 7, 'powerup': 5, 'powerdown': 5}
+SOUND_VOLUMES = {'powerup': .5, 'powerdown': .5} # defaults to 1
 BASE_SIMUL_SNDS = 3 # for same base ID
 EXTRA_SIMUL_SNDS = 5
 
@@ -63,6 +66,7 @@ CAR_EXPLOSION_FORCE = 2000
 OBJ_EXPLOSION_FORCE = .7 # per unit mass
 DEATH_PARTICLES = 2500
 OBJ_PARTICLES = OBJ_EXPLOSION_FORCE
+POWERUP_PARTICLES = 200
 CRASH_PARTICLES = .0001
 PARTICLE_SPEED = 10
 PARTICLE_SPEED_IF_ACCEL = 40
@@ -77,11 +81,12 @@ AIR_RESISTANCE = 3
 ANGULAR_AIR_RESISTANCE = .1
 INITIAL_VEL = -1000
 TARGET_SCORE = 10
-
 BG_SPEED = 1 # ratio of FG speed
 SPAWN_RATE = .0004
+POWERUP_SPAWN_RATE = .00003
 LEVEL_ACCEL = .5
-CAR_MASS = 50
+
+CAR_MASS = 50.
 CAR_ELAST = 1.7
 OBJ_ELAST = .3
 CAR_FRICTION = .5
@@ -90,6 +95,7 @@ CAR_ACCEL = 10000
 CAR_ANGLE_RESTORATION = .8 # amount to multiply angle by each frame moved
 CAR_FORCE_OFFSET = (-5, 0)
 OBJ_DENSITY = .0004
+OBJ_VEL = 100
 OBJ_ANG_VEL = 10
 OBJ_SHAPES = {
     'car': ((35, 0), (15, 35), (-10, 40), (-15, 0), (-10, -40), (15, -35)),
@@ -99,6 +105,14 @@ OBJ_SHAPES = {
 }
 weightings = {'rock0': 1, 'rock1': 1, 'rock2': 1}
 OBJS, OBJ_WEIGHTINGS = zip(*(weightings.iteritems()))
+POWERUP_COLOURS = {'invincible': (100, 100, 255), 'heavy': (160, 0, 0), 'fast': (0, 100, 0)}
+POWERUP_MASS = 20
+POWERUP_SIZE = 20
+weightings = {'invincible': 1, 'heavy': 1, 'fast': .5}
+POWERUPS, POWERUP_WEIGHTINGS = zip(*(weightings.iteritems()))
+POWERUP_TIME = {'invincible': 10 * FPS, 'heavy': 5 * FPS, 'fast': 10 * FPS}
+HEAVY_MULTIPLIER = 10
+FAST_MULTIPLIER = 1.5
 
 CAR_HEALTH_ON = True
 CAR_HEALTH_BASE = 1000000

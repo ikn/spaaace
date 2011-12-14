@@ -379,7 +379,7 @@ Only one instance of a sound will be played each frame.
                     # playing too many: stop the oldest
                     current[0][0].stop()
                     current.pop(0)
-            snd.set_volume(conf.SOUND_VOLUME * volume * .01)
+            snd.set_volume(conf.SOUND_VOLUME * conf.SOUND_VOLUMES.get(base_ID, 1) * volume * .01)
             self.sounds.append(snd)
             # add to currently playing
             l = int(round(l * conf.FPS))

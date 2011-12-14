@@ -8,7 +8,7 @@ import pymunk as pm
 from ext import evthandler as eh
 
 import conf
-from obj import Car, Obj
+from obj import Car, Obj, Powerup
 import title
 
 ir = lambda x: int(round(x))
@@ -18,7 +18,22 @@ def irs (x):
     else:
         return tuple(ir(i) * conf.SCALE for i in x)
 
-def col_cb (space, arbiter, level):
+def begin_col_cb (space, arbiter, level):
+    # determine colliding objects' types
+    powerup_shapes = level.powerup_shapes
+    shapes = arbiter.shapes[:2]
+    # if one is a powerup, layers + groups means the other will be a car
+    powerups = [shape in powerup_shapes for shape in shapes]
+    if any(powerups):
+        i = powerups.index(True)
+        p = powerup_shapes[shapes[i]]
+        level.car_shapes[shapes[not i]].powerup(p.ID)
+        p.die()
+        return False
+    else:
+        return True
+
+def post_col_cb (space, arbiter, level):
     if arbiter.is_first_contact:
         # sound
         f = arbiter.total_impulse_with_friction
@@ -27,13 +42,15 @@ def col_cb (space, arbiter, level):
         # particles
         amount = f * conf.GRAPHICS * conf.CRASH_PARTICLES * conf.SCALE
         ptcls = []
-        car_shapes = dict((c.shape, c.ID) for c in level.cars)
+        car_shapes = level.car_shapes
         all_cars = all(shape in car_shapes for shape in arbiter.shapes)
         for shape in arbiter.shapes:
             if shape in car_shapes:
-                ID = car_shapes[shape]
+                c = car_shapes[shape]
+                ID = c.ID
+                # damage
                 if not all_cars:
-                    level.all_cars[ID].damage(f)
+                    c.damage(f)
                 ptcls.append((conf.CAR_COLOURS[ID], amount))
                 ptcls.append((conf.CAR_COLOURS_LIGHT[ID], amount))
             else:
@@ -66,19 +83,25 @@ class Level:
         w, h = conf.RES
         s = self.space = pm.Space()
         s.collision_bias = 0
-        s.add_collision_handler(0, 0, None, None, col_cb, None, self)
+        s.add_collision_handler(0, 0, begin_col_cb, None, post_col_cb, None, self)
         # variables
         self.pos = 0
         self.vel = conf.INITIAL_VEL
         self.next_spawn = ir(conf.FPS * triangular() / (-self.vel * conf.SPAWN_RATE))
+        n = self.num_cars if self.num_cars > 0 else 2
+        self.next_p_spawn = ir(conf.FPS * triangular() / (-self.vel * conf.POWERUP_SPAWN_RATE * n))
         self.accel = conf.LEVEL_ACCEL
         self.scores = [0] * self.num_cars
         self.frames = 0
         # lines
         b = conf.BORDER
+        r = conf.POWERUP_SIZE
         self.death_bb = pm.BB(b, b, pw - b, ph - b)
         self.outer_bb = pm.BB(0, 0, pw, ph)
+        self.powerup_bb = pm.BB(-r, -r, pw + r, ph + r)
         # stuff
+        self.powerups = []
+        self.powerup_shapes = {}
         self.objs = []
         if allow_pause:
             event_handler.add_event_handlers({
@@ -113,21 +136,18 @@ class Level:
 
     def reset (self, first = False):
         s = self.space
-        try:
-            # destroy all objects
-            forces = []
-            for o in self.objs:
-                force = conf.OBJ_EXPLOSION_FORCE * o.mass
-                p = o.body.position
-                forces.append((force, p))
-                amount = irs(conf.GRAPHICS * conf.OBJ_PARTICLES * o.mass)
-                self.spawn_particles(p * conf.SCALE, (conf.OBJ_COLOUR, amount),
-                                     (conf.OBJ_COLOUR_LIGHT, amount))
-                s.remove(o.body, o.shape)
-            self.objs = []
-            self.explosion_force(*forces)
-        except AttributeError:
-            self.objs = []
+        # destroy all objects
+        forces = []
+        for o in self.objs:
+            force = conf.OBJ_EXPLOSION_FORCE * o.mass
+            p = o.body.position
+            forces.append((force, p))
+            amount = irs(conf.GRAPHICS * conf.OBJ_PARTICLES * o.mass)
+            self.spawn_particles(p * conf.SCALE, (conf.OBJ_COLOUR, amount),
+                                    (conf.OBJ_COLOUR_LIGHT, amount))
+            s.remove(o.body, o.shape)
+        self.objs = []
+        self.explosion_force(*forces)
         # objs
         if first:
             self.create_players()
@@ -155,17 +175,20 @@ class Level:
                 used_keys += 1
         self.event_handler.add_key_handlers(keys)
         self.cars = []
+        self.car_shapes = {}
 
     def spawn_players (self, *ps):
         if not ps:
             IDs = [c.ID for c in self.cars]
             ps = [i for i in xrange(self.num_cars) if i not in IDs]
         cs = self.cars
+        ss = self.car_shapes
         for i in ps:
             assert not any(c.ID == i for c in cs)
             c = self.all_cars[i]
             c.spawn()
             cs.append(c)
+            ss[c.shape] = c
 
     def spawn_particles (self, pos, *colours):
         # colours is a list of (colour, amount) tuples
@@ -191,7 +214,7 @@ class Level:
         for f, p1 in forces:
             f *= conf.EXPLOSION_FORCE
             # apply to every existing object
-            for o in self.cars + self.objs:
+            for o in self.cars + self.objs + self.powerups:
                 if o in exclude:
                     continue
                 p2 = o.body.position
@@ -324,13 +347,36 @@ class Level:
             self.space.step(conf.STEP)
             # move background
             self.pos += conf.BG_SPEED * self.vel * conf.STEP * conf.SCALE
-            # update cars
-            rm = []
-            for c in self.cars:
-                if c.update():
-                    rm.append(c)
-            for c in rm:
-                self.cars.remove(c)
+            # update cars and powerups
+            for objs, shapes in ((self.cars, self.car_shapes), (self.powerups, self.powerup_shapes)):
+                rm = []
+                for o in objs:
+                    if o.update():
+                        rm.append(o)
+                for o in rm:
+                    objs.remove(o)
+                    del shapes[o.shape]
+            # add powerups
+            self.next_p_spawn -= 1
+            if self.next_p_spawn <= 0:
+                n = self.num_cars if self.num_cars > 0 else 2
+                self.next_p_spawn = ir(conf.FPS * triangular() / (-self.vel * conf.POWERUP_SPAWN_RATE * n))
+                # choose obj type
+                l = list(conf.POWERUP_WEIGHTINGS)
+                if not conf.CAR_HEALTH_ON:
+                    l[conf.POWERUPS.index('invincible')] = 0
+                cumulative = []
+                last = 0
+                for x in l:
+                    last += x
+                    cumulative.append(last)
+                index = min(bisect(cumulative, cumulative[-1] * r()), len(l) - 1)
+                ID = conf.POWERUPS[index]
+                # create
+                lw, lh = conf.SIZE
+                p = Powerup(self, ID, (lw, r() * lh), self.vel)
+                self.powerups.append(p)
+                self.powerup_shapes[p.shape] = p
         # update particles
         ptcls = []
         a = conf.PARTICLE_ACCEL * conf.SCALE
@@ -370,7 +416,7 @@ class Level:
             ID = conf.OBJS[index]
             # create
             lw, lh = conf.SIZE
-            self.objs.append(Obj(self, ID, lw, r() * lh, self.vel))
+            self.objs.append(Obj(self, ID, (lw, r() * lh), self.vel))
         # update objs
         rm = []
         for o in self.objs:
@@ -505,8 +551,8 @@ class Level:
                     screen.blit(img, pos, [0, 0] + size)
                     pos[i] += size[i]
         # objs
-        for c in self.cars + self.objs:
-            c.draw(screen)
+        for o in self.cars + self.objs + self.powerups:
+            o.draw(screen)
         # particles
         for c, p, v, ac, t, size in self.particles:
             screen.fill(c, p + [size, size])

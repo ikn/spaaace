@@ -6,6 +6,10 @@ import pymunk as pm
 
 import conf
 
+# TODO:
+# - make powerup particles 2-tone
+# - depiction of having powerups
+
 class ObjBase:
     def __init__ (self, level, ID, pos, angle, v, ang_vel, pts, elast,
                   friction, *img_IDs):
@@ -20,6 +24,8 @@ class ObjBase:
             # make sure we don't start OoB (need new points after rotation)
             new_pts = s.get_points()
             pos = (pos[0] - min(i[0] for i in new_pts) - 1, pos[1])
+            # don't collide with powerup
+            s.layers = 2
         b.position = pos
         s.elasticity = elast
         s.friction = friction
@@ -35,7 +41,7 @@ class ObjBase:
                 imgs.append(self.level.game.img(img_ID + '.png', conf.SCALE))
             w, h = imgs[0].get_size()
             self.centre = imgs[0].get_rect().center
-            self.offset = o = [-w / 2, -h / 2]
+            self.offset = [-w / 2, -h / 2]
         except pg.error:
             self.imgs = []
         self._last_angle = None
@@ -57,7 +63,7 @@ class ObjBase:
                 self.gen_imgs()
             angle = self.body.angle
             last = self._last_angle
-            p = list(self.body.position)
+            p = pm.Vec2d(self.body.position)
             g = conf.GRAPHICS
             max_t = conf.MAX_ROTATE_THRESHOLD
             if g == 0:
@@ -93,14 +99,12 @@ class ObjBase:
                 # store
                 self._last_angle = angle
                 self._last_angle_data = [img, o]
-            p[0] *= conf.SCALE
-            p[1] *= conf.SCALE
-            p[0] += o[0]
-            p[1] += o[1]
+            p *= conf.SCALE
+            p += o
             screen.blit(img, p)
 
 class Obj (ObjBase):
-    def __init__ (self, level, ID, x, y, vx):
+    def __init__ (self, level, ID, p, vx):
         self.ID = ID
         self.colour = choice((conf.OBJ_COLOUR_LIGHT, conf.OBJ_COLOUR))
         pts = conf.OBJ_SHAPES[ID]
@@ -109,7 +113,8 @@ class Obj (ObjBase):
         # randomise angle/vel
         angle = random() * 2 * pi
         ang_vel = (random() - .5) * conf.OBJ_ANG_VEL
-        ObjBase.__init__(self, level, ID, (x, y), angle, (vx, 0), ang_vel, pts,
+        v = (vx + (random() - .5) * conf.OBJ_VEL, (random() - .5) * conf.OBJ_VEL)
+        ObjBase.__init__(self, level, ID, p, angle, v, ang_vel, pts,
                          conf.OBJ_ELAST, conf.OBJ_FRICTION, ID)
 
     def update (self):
@@ -133,6 +138,7 @@ class Car (ObjBase):
         self.dead = False
         self.dying = False
         self.health = self.max_health = conf.CAR_HEALTH_BASE * conf.CAR_HEALTH_MULTIPLIER
+        self.powerups = {}
 
     def spawn (self):
         y = (conf.SIZE[1] / (self.level.num_cars + 1)) * (self.ID + 1)
@@ -146,10 +152,14 @@ class Car (ObjBase):
         self.dying = False
         self.health = self.max_health
         self.set_img(0)
+        self.invincible = False
+        self.body.mass = self.mass = conf.CAR_MASS
+        self.power_multiplier = 1.
+        self.force_multiplier = 1.
 
     def move (self, f):
         if not self.level.paused:
-            f = [f_i * conf.CAR_ACCEL for f_i in f]
+            f = [f_i * conf.CAR_ACCEL * self.force_multiplier * self.power_multiplier for f_i in f]
             self.body.apply_impulse(f, conf.CAR_FORCE_OFFSET)
 
     def _move (self, k, x, mode, d):
@@ -160,7 +170,7 @@ class Car (ObjBase):
         self.move(f)
 
     def damage (self, amount):
-        if not conf.CAR_HEALTH_ON:
+        if not conf.CAR_HEALTH_ON or self.invincible:
             return
         old = self.health
         self.health -= amount
@@ -172,6 +182,33 @@ class Car (ObjBase):
         if new <= 0:
             self.dying = True
 
+    def powerup (self, p):
+        self.level.game.play_snd('powerup')
+        if p in self.powerups:
+            self.powerups[p] += conf.POWERUP_TIME[p]
+        else:
+            self.powerups[p] = conf.POWERUP_TIME[p]
+            # add effects
+            if p == 'invincible':
+                self.invincible = True
+            elif p == 'heavy':
+                self.mass *= conf.HEAVY_MULTIPLIER
+                self.body.mass = self.mass
+                self.force_multiplier = conf.HEAVY_MULTIPLIER
+            elif p == 'fast':
+                self.power_multiplier = conf.FAST_MULTIPLIER
+
+    def end_powerup (self, p):
+        self.level.game.play_snd('powerdown')
+        del self.powerups[p]
+        if p == 'invincible':
+            self.invincible = False
+        elif p == 'heavy':
+            self.body.mass = self.mass = conf.CAR_MASS
+            self.force_multiplier = 1
+        elif p == 'fast':
+            self.power_multiplier = 1
+
     def die (self):
         l = self.level
         l.game.play_snd('explode')
@@ -179,11 +216,12 @@ class Car (ObjBase):
         force = conf.CAR_EXPLOSION_FORCE
         amount = conf.GRAPHICS * conf.DEATH_PARTICLES * conf.SCALE
         l.explosion_force((force, p), exclude = [self])
-        self.level.spawn_particles(p * conf.SCALE,
+        l.spawn_particles(p * conf.SCALE,
             (conf.CAR_COLOURS[self.ID], amount),
             (conf.CAR_COLOURS_LIGHT[self.ID], amount)
         )
-        self.level.space.remove(self.body, self.shape)
+        l.space.remove(self.body, self.shape)
+        self.powerups = {}
         self.dead = True
 
     def update (self):
@@ -191,11 +229,20 @@ class Car (ObjBase):
         if not self.level.death_bb.contains_vect(self.body.position) or self.dying:
             self.die()
             return True
+        # powerups
+        ps = self.powerups
+        rm = []
+        for p in self.powerups.iterkeys():
+            ps[p] -= 1
+            if ps[p] <= 0:
+                rm.append(p)
+        for p in rm:
+            self.end_powerup(p)
         # move towards facing the right a bit
         self.body.angle = conf.CAR_ANGLE_RESTORATION * self.body.angle
         # damp angular velocity
         v = self.body.angular_velocity
-        f = -conf.ANGULAR_AIR_RESISTANCE * v
+        f = -conf.ANGULAR_AIR_RESISTANCE * self.force_multiplier * v
         if abs(f) > abs(v):
             f = -v
         v += f
@@ -204,10 +251,61 @@ class Car (ObjBase):
         v = self.body.velocity
         f = []
         for vi in v:
-            fi = -conf.AIR_RESISTANCE * vi
+            fi = -conf.AIR_RESISTANCE * self.force_multiplier * vi
             max_fi = self.mass * vi
             if abs(fi) > abs(max_fi):
                 fi = -max_fi
             f.append(fi)
         self.body.apply_impulse(f, conf.CAR_FORCE_OFFSET)
         return False
+
+class Powerup:
+    def __init__ (self, level, ID, p, vx):
+        self.level = level
+        self.ID = ID
+        self.mass = conf.POWERUP_MASS
+        b = self.body = pm.Body(self.mass, pm.inf)
+        b.position = p
+        b.velocity = (vx + (random() - .5) * conf.OBJ_VEL, (random() - .5) * conf.OBJ_VEL)
+        s = self.shape = pm.Circle(b, conf.POWERUP_SIZE)
+        s.sensor = True
+        # don't collide with other powerups
+        s.group = 1
+        # don't collide with rocks
+        s.layers = 1
+        level.space.add(b, s)
+        self.dying = False
+        self.gen_img()
+
+    def gen_img (self):
+        try:
+            self.img = self.level.game.img('powerup-{0}.png'.format(self.ID), conf.SCALE)
+            w, h = self.img.get_size()
+            self.offset = pm.Vec2d((-w / 2, -h / 2))
+        except pg.error:
+            self.img = None
+
+    def die (self):
+        p = self.body.position
+        amount = conf.GRAPHICS * conf.POWERUP_PARTICLES * conf.SCALE
+        self.level.spawn_particles(p * conf.SCALE,
+            (conf.POWERUP_COLOURS[self.ID], amount)
+        )
+        self.dying = True
+
+    def update (self):
+        if not self.shape.cache_bb().intersects(self.level.powerup_bb) or self.dying:
+            self.level.space.remove(self.body, self.shape)
+            return True
+        else:
+            return False
+
+    def draw (self, screen):
+        p = [int(round(x * conf.SCALE)) for x in self.body.position]
+        if conf.GRAPHICS <= conf.NO_IMAGE_THRESHOLD or self.img is None:
+            r = int(round(conf.POWERUP_SIZE * conf.SCALE))
+            pg.draw.circle(screen, conf.POWERUP_COLOURS[self.ID], p, r)
+        else:
+            if self.level.dirty:
+                self.gen_img()
+            screen.blit(self.img, p + self.offset)
