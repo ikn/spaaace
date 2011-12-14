@@ -52,8 +52,9 @@ JOY_CONTROLS = {
         'back': (1, 6, 7)
     }
 }
-JOY_CONTROLS['XBOX 360 For Windows (Controller)'] = JOY_CONTROLS['Microsoft X-Box 360 pad']
-FB_JOY_CONTROLS = {'move': (0, 1), 'next': (0,), 'back': (1,)}
+for s in ('XBOX 360 For Windows (Controller)', 'Controller (XBOX 360 For Windows)'):
+    JOY_CONTROLS[s] = JOY_CONTROLS['Microsoft X-Box 360 pad']
+FB_JOY_CONTROLS = {'move': (0, 1), 'next': (0,), 'back': (1, 6, 7)}
 MENU_REPEAT_DELAY = .4
 MENU_REPEAT_RATE = .15
 
@@ -99,6 +100,7 @@ OBJ_SHAPES = {
 weightings = {'rock0': 1, 'rock1': 1, 'rock2': 1}
 OBJS, OBJ_WEIGHTINGS = zip(*(weightings.iteritems()))
 
+CAR_HEALTH_ON = True
 CAR_HEALTH_BASE = 1000000
 CAR_HEALTH_MULTIPLIER = 1.
 CAR_DAMAGE_STEPS = (.75, .5, .25)
@@ -114,7 +116,7 @@ BORDER_COLOUR = (255, 255, 170)
 FONT = 'Chunk.otf'
 UI_FONT_COLOUR = (200, 200, 150)
 UI_FONT_COLOUR_SEL = (140, 0, 0)
-UI_FONT_SIZE = 100
+UI_FONT_SIZE = 80
 UI_FONT_SHADOW = (50, 50, 40)
 UI_FONT_SHADOW_SEL = (76, 0, 0)
 UI_FONT_SHADOW_OFFSET = (UI_FONT_SIZE * .05,) * 2

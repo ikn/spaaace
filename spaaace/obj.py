@@ -6,9 +6,6 @@ import pymunk as pm
 
 import conf
 
-# TODO:
-# - adjust default health
-
 class ObjBase:
     def __init__ (self, level, ID, pos, angle, v, ang_vel, pts, elast,
                   friction, *img_IDs):
@@ -163,6 +160,8 @@ class Car (ObjBase):
         self.move(f)
 
     def damage (self, amount):
+        if not conf.CAR_HEALTH_ON:
+            return
         old = self.health
         self.health -= amount
         new = self.health

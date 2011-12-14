@@ -97,6 +97,7 @@ class Level:
             j = pygame.joystick.Joystick(i)
             j.init()
             name = j.get_name()
+            print 'found controller: \'{0}\''.format(name)
             self.joys.append(controls.get(name, conf.FB_JOY_CONTROLS))
         self.won = None
         self.dirty = True
@@ -208,18 +209,25 @@ class Level:
         if axis == 0:
             # spin
             o = self.options[self.current_opt]
-            if o[1] != 2:
+            o_type = o[1]
+            if o_type not in (2, 3):
                 # not a spin option
                 return
-            v, mn, mx, step = o[2:6]
-            v += sign * step
-            if mx is not None:
-                v = min(v, mx)
-            if mn is not None:
-                v = max(v, mn)
+            if o_type == 2:
+                v, mn, mx, step = o[2:6]
+                v += sign * step
+                if mx is not None:
+                    v = min(v, mx)
+                if mn is not None:
+                    v = max(v, mn)
+            else:
+                v, vs = o[2:4]
+                v += sign
+                v %= len(vs)
             o[2] = v
             # call callback
-            o[7](sign * step, *o[8:])
+            i = 7 if o_type == 2 else 4
+            o[i](v, *o[i + 1:])
         else:
             # move selection
             sels = self.selectable_opts
@@ -420,6 +428,9 @@ class Level:
             elif o_type == 2:
                 spin = True
                 v, mn, mx, step, fmt = o[2:7]
+            elif o_type == 3:
+                spin = True
+                v, vs = o[2:4]
             # set values for this option
             sel = self.current_opt == i
             font_data[1] = text
@@ -427,9 +438,9 @@ class Level:
             shadow[0] = sc_s if sel else sc
             # render
             sfc, lines = self.game.img(font_data)
-            if o_type == 2:
+            if o_type in (2, 3):
                 # render current value
-                font_data[1] = fmt.format(v)
+                font_data[1] = fmt.format(v) if o_type == 2 else vs[v]
                 sfc2, lines = self.game.img(font_data)
                 w = max(w, sfc.get_width(), sfc2.get_width())
                 sfc = (sfc, sfc2)

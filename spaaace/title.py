@@ -26,18 +26,19 @@ class Title (Level):
             ('Start', 1, self.start_level),
             ('Players: ', 2, self._num_players, 1, 4, 1, '{0}', self.change_players),
             ('Graphics: ', 2, conf.GRAPHICS, 0, None, .1, '{0:.1f}', self.change_graphics),
-            ('Health: ', 2, conf.CAR_HEALTH_MULTIPLIER, 0, None, .1, '{0:.1f}', self.change_health),
+            ('Health: ', 3, conf.CAR_HEALTH_ON, ('off', 'on'), self.change_health),
+            ('Health: ', 2, conf.CAR_HEALTH_MULTIPLIER, 0, None, .1, '{0:.1f}', self.change_health, False),
             ('Quit', 1, self.game.quit_backend)
         ))
 
-    def change_players (self, d):
-        n = min(max(self._num_players + d, 1), 4)
+    def change_players (self, v):
+        n = min(max(v, 1), 4)
         self.scores = [0] * n
         self._num_players = n
 
-    def change_graphics (self, d):
+    def change_graphics (self, v):
         old_g = conf.GRAPHICS
-        conf.GRAPHICS = new_g = round(max(conf.GRAPHICS + d, 0), 1)
+        conf.GRAPHICS = new_g = round(max(v, 0), 1)
         if old_g == new_g:
             return
         # delete cached images if our draw methods change
@@ -60,8 +61,11 @@ class Title (Level):
             (conf.CAR_COLOURS_LIGHT[ID], amount)
         )
 
-    def change_health (self, d):
-        conf.CAR_HEALTH_MULTIPLIER += d
+    def change_health (self, v, toggle = True):
+        if toggle:
+            conf.CAR_HEALTH_ON = v
+        else:
+            conf.CAR_HEALTH_MULTIPLIER = v
 
     def start_level (self):
         self.game.quit_backend(no_quit = True)
