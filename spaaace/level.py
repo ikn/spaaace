@@ -27,7 +27,10 @@ def begin_col_cb (space, arbiter, level):
     if any(powerups):
         i = powerups.index(True)
         p = powerup_shapes[shapes[i]]
-        level.car_shapes[shapes[not i]].powerup(p)
+        try:
+            level.car_shapes[shapes[not i]].powerup(p)
+        except KeyError:
+            return True
         p.die()
         return False
     else:
@@ -40,23 +43,27 @@ def post_col_cb (space, arbiter, level):
         f = (f[0] ** 2 + f[1] ** 2) ** .5
         level.game.play_snd('crash', f * conf.CRASH_VOLUME)
         # particles
-        amount = f * conf.GRAPHICS * conf.CRASH_PARTICLES * conf.SCALE
-        ptcls = []
+        shapes = arbiter.shapes
+        powerup_shapes = level.powerup_shapes
         car_shapes = level.car_shapes
-        all_cars = all(shape in car_shapes for shape in arbiter.shapes)
-        for shape in arbiter.shapes:
+        all_cars = all(shape in car_shapes for shape in shapes)
+        colours = []
+        for shape in shapes:
             if shape in car_shapes:
                 c = car_shapes[shape]
                 ID = c.ID
                 # damage
                 if not all_cars:
                     c.damage(f)
-                ptcls.append((conf.CAR_COLOURS[ID], amount))
-                ptcls.append((conf.CAR_COLOURS_LIGHT[ID], amount))
+                colours += [conf.CAR_COLOURS[ID], conf.CAR_COLOURS_LIGHT[ID]]
+            elif shape in powerup_shapes:
+                ID = powerup_shapes[shape].ID
+                colours += [conf.POWERUP_COLOURS[ID], conf.POWERUP_COLOURS_LIGHT[ID]]
             else:
-                ptcls.append((conf.OBJ_COLOUR, amount))
-                ptcls.append((conf.OBJ_COLOUR_LIGHT, amount))
-        level.spawn_particles(arbiter.contacts[0].position * conf.SCALE, *ptcls)
+                colours += [conf.OBJ_COLOUR, conf.OBJ_COLOUR_LIGHT]
+        amount = f * conf.GRAPHICS * conf.CRASH_PARTICLES * conf.SCALE
+        level.spawn_particles(arbiter.contacts[0].position * conf.SCALE,
+                              *((colour, amount) for colour in colours))
 
 class Level:
     def __init__ (self, game, event_handler, num_cars = 2, allow_pause = True):

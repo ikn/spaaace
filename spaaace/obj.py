@@ -20,8 +20,6 @@ class ObjBase:
             # make sure we don't start OoB (need new points after rotation)
             new_pts = s.get_points()
             pos = (pos[0] - min(i[0] for i in new_pts) - 1, pos[1])
-            # don't collide with powerup
-            s.layers = 2
         b.position = pos
         s.elasticity = elast
         s.friction = friction
@@ -51,7 +49,7 @@ class ObjBase:
 
     def set_img (self, i):
         self.current_img = i
-        self._img_cache['main'] = None
+        self._img_cache = {}
         self._offset_cache = None
 
     def _draw_imgs (self, screen, *data):
@@ -317,15 +315,13 @@ class Powerup:
         self.level = level
         self.ID = ID
         self.mass = conf.POWERUP_MASS
-        b = self.body = pm.Body(self.mass, pm.inf)
+        self.moment = pm.moment_for_circle(self.mass, 0, conf.POWERUP_SIZE)
+        b = self.body = pm.Body(self.mass, self.moment)
         b.position = p
         b.velocity = (vx + (random() - .5) * conf.OBJ_VEL, (random() - .5) * conf.OBJ_VEL)
         s = self.shape = pm.Circle(b, conf.POWERUP_SIZE)
-        s.sensor = True
-        # don't collide with other powerups
-        s.group = 1
-        # don't collide with rocks
-        s.layers = 1
+        s.elasticity = conf.OBJ_ELAST
+        s.friction = conf.OBJ_FRICTION
         level.space.add(b, s)
         self.dying = False
         self.gen_img()
