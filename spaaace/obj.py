@@ -7,8 +7,7 @@ import pymunk as pm
 import conf
 
 # TODO:
-# - make powerup particles 2-tone
-# - depiction of having powerups
+# - depiction of having powerups (car-invincible.png, car-heavy.png, car-fast.png)
 
 class ObjBase:
     def __init__ (self, level, ID, pos, angle, v, ang_vel, pts, elast,
@@ -244,7 +243,7 @@ class Car (ObjBase):
         # powerups
         ps = self.powerups
         rm = []
-        for p in self.powerups.iterkeys():
+        for p in self.powerups:
             ps[p] -= 1
             if ps[p] <= 0:
                 rm.append(p)

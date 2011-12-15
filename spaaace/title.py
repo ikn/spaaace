@@ -67,6 +67,9 @@ class Title (Level):
         else:
             conf.CAR_HEALTH_MULTIPLIER = v
 
+    def pause (self):
+        raise ValueError('not implemented')
+
     def start_level (self):
         self.game.quit_backend(no_quit = True)
         self.game.start_backend(Level, self._num_players)

@@ -16,8 +16,10 @@ from spaaace.ext import evthandler as eh
 from spaaace.title import Title
 from spaaace.level import Level
 from spaaace import conf
+
+ir = lambda x: int(round(x))
 max_snds = (conf.BASE_SIMUL_SNDS + conf.EXTRA_SIMUL_SNDS * conf.GRAPHICS) * len(conf.SOUNDS)
-pygame.mixer.set_num_channels(int(round(max_snds)))
+pygame.mixer.set_num_channels(ir(max_snds))
 
 class Fonts (object):
     """Collection of pygame.font.Font instances."""
@@ -167,7 +169,6 @@ minimise
 running: set to False to exit the main loop (Game.run).
 imgs: image cache.
 files: loaded image cache (before resize).
-sounds: sound effect cache.
 music: filenames for known music.
 fonts: a Fonts instance.
 backend: the current running backend.
@@ -179,8 +180,8 @@ backends: a list of previous (nested) backends, most 'recent' last.
         self.running = False
         self.imgs = {}
         self.files = {}
-        self.sounds = []
-        self.current_snds = {}
+        self._sounds = []
+        self._current_snds = dict((s, []) for s in conf.SOUNDS)
         # start playing music
         pygame.mixer.music.set_volume(conf.MUSIC_VOLUME * .01)
         pygame.mixer.music.set_endevent(conf.EVENT_ENDMUSIC)
@@ -252,7 +253,6 @@ no_quit: if True, don't quit if this is the last backend.  Only pass this if
 If the running backend is the last (root) one, exit the game.
 
 """
-        depth = int(depth)
         if depth < 1:
             return
         try:
@@ -305,6 +305,8 @@ data: if rendering text, a tuple of args to pass to Fonts.text, else a filename
       to load.
 size: scale the image.  Can be an (x, y) size, a rect (in which case its
       dimension is used), or a number to scale by.  Ignored if rendering text.
+      If (x, y), either x or y can be None to scale to the other with aspect
+      ratio preserved.
 
 """
         text = not isinstance(data, basestring)
@@ -333,15 +335,23 @@ size: scale the image.  Can be an (x, y) size, a rect (in which case its
                 img = self.files[data]
             else:
                 img = pygame.image.load(conf.IMG_DIR + data)
-                # convert first if won't resize, as it'll come from here
-                if not got_size:
-                    img = self.convert_img(img)
+                # convert first
+                img = self.convert_img(img)
                 self.files[data] = img
         # scale
         if got_size:
+            current_size = img.get_size()
             if not isinstance(size, tuple):
-                size = [int(size * x) for x in img.get_size()]
+                size = (ir(size * current_size[0]), ir(size * current_size[1]))
+            # handle None
+            for i in (0, 1):
+                if size[i] is None:
+                    size = list(size)
+                    scale = float(size[not i]) / current_size[not i]
+                    size[i] = ir(current_size[i] * scale)
+                    size = tuple(size)
             img = pygame.transform.smoothscale(img, size)
+        else:
             # speed up blitting (if not resized, this is already done)
             img = self.convert_img(img)
         result = (img, lines) if text else img
@@ -351,12 +361,20 @@ size: scale the image.  Can be an (x, y) size, a rect (in which case its
         return result
 
     def play_snd (self, base_ID, volume = 1):
-        """Play a sound with the given ID.
+        """Play a sound.
 
-Only one instance of a sound will be played each frame.
+play_snd(base_ID, volume = 1)
+
+base_ID: the ID of the sound to play (we look for base_ID + i for a number i,
+         as many sounds as conf.SOUNDS[base_ID]).
+volume: float to scale volume by.
 
 """
-        IDs = [base_ID + str(i) for i in xrange(conf.SOUNDS[base_ID])]
+        try:
+            n = conf.SOUNDS[base_ID]
+        except (KeyError, AssertionError):
+            return
+        IDs = [base_ID + str(i) for i in xrange(n)]
         ID = choice(IDs)
         # load sound
         try:
@@ -369,31 +387,27 @@ Only one instance of a sound will be played each frame.
             if l < 10 ** -3:
                 # no way this is valid
                 return
-            try:
-                current = self.current_snds[base_ID]
-            except KeyError:
-                self.current_snds[base_ID] = current = []
-            else:
-                max_snds = int(round(conf.BASE_SIMUL_SNDS + conf.GRAPHICS * conf.EXTRA_SIMUL_SNDS))
-                if current and len(current) >= max_snds:
-                    # playing too many: stop the oldest
-                    current[0][0].stop()
-                    current.pop(0)
+            current = self._current_snds[base_ID]
+            max_snds = ir(conf.BASE_SIMUL_SNDS + conf.GRAPHICS * conf.EXTRA_SIMUL_SNDS)
+            if current and len(current) >= max_snds:
+                # playing too many: stop the oldest
+                current[0][0].stop()
+                current.pop(0)
             snd.set_volume(conf.SOUND_VOLUME * conf.SOUND_VOLUMES.get(base_ID, 1) * volume * .01)
-            self.sounds.append(snd)
+            self._sounds.append(snd)
             # add to currently playing
-            l = int(round(l * conf.FPS))
+            l = ir(l * conf.FPS)
             if l > 0:
                 current.append([snd, l])
 
     def _play_snds (self):
         """Play queued up sounds for this frame."""
         # play new sounds
-        for snd in self.sounds:
+        for snd in self._sounds:
             snd.play()
-        self.sounds = []
+        self._sounds = []
         # purge finished sounds
-        for snds in self.current_snds.itervalues():
+        for snds in self._current_snds.itervalues():
             i = 0
             while i < len(snds):
                 snds[i][1] -= 1
@@ -466,7 +480,7 @@ Only one instance of a sound will be played each frame.
             # wait
             frame = self.backend.FRAME * num_updates
             t1 = time()
-            this_free = wait(int(1000 * (frame - t1 + t0)))
+            this_free = wait(ir(1000 * (frame - t1 + t0)))
             free += this_free
             t0 = t1 + this_free / 1000.
             n += 1
@@ -485,12 +499,15 @@ Only one instance of a sound will be played each frame.
 
     def refresh_display (self, *args):
         """Update the display mode from conf, and notify the backend."""
+        # get resolution and flags
         flags = conf.FLAGS
         if conf.FULLSCREEN:
             flags |= pygame.FULLSCREEN
             r = conf.RES_F
         else:
             r = (w, h) = conf.RES_W
+        if conf.RESIZABLE:
+            flags |= pygame.RESIZABLE
         s = conf.SIZE
         # lock aspect ratio
         r = list(r)
@@ -501,8 +518,6 @@ Only one instance of a sound will be played each frame.
         # set new scale
         conf.SCALE = float(r[1]) / s[1]
         # set mode
-        if conf.RESIZABLE:
-            flags |= pygame.RESIZABLE
         self.screen = pygame.display.set_mode(r, flags)
         try:
             self.backend.dirty = True
@@ -532,7 +547,7 @@ if __name__ == '__main__':
         pygame.display.set_icon(pygame.image.load(conf.WINDOW_ICON))
     if conf.WINDOW_TITLE is not None:
         pygame.display.set_caption(conf.WINDOW_TITLE)
-    pygame.mouse.set_visible(False)
+    pygame.mouse.set_visible(conf.MOUSE_VISIBLE)
     restarting = True
     while restarting:
         restarting = False

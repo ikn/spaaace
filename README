@@ -34,11 +34,14 @@ of sounds playing simultaneously.
 
 Keyboard:
 
-pause: escape, start on any controller
-fullscreen: F11, alt + enter
-minimise: F10
+enter, space: select option in menus
+escape, backspace: pause/unpause, quit on main menu
+F11, alt + enter: fullscreen
+F10: minimise
+arrow keys: up/down: choose option in menus
+            left/right: alter selected option
 
-Xbox 360 controller (any plugged in controllers work):
+Xbox 360 controller (any that are plugged in work):
 
 A: select option in menus
 B, start, back: pause/unpause, quit on main menu
@@ -58,6 +61,8 @@ arrow keys
 WASD
 numpad arrow keys
 IJKL
+
+WASD and IJKL work for the Dvorak keyboard layout too (,AOE and CHTN).
 
     LICENSING
 

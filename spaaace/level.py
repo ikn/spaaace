@@ -90,6 +90,7 @@ class Level:
         self.next_spawn = ir(conf.FPS * triangular() / (-self.vel * conf.SPAWN_RATE))
         n = self.num_cars if self.num_cars > 0 else 2
         self.next_p_spawn = ir(conf.FPS * triangular() / (-self.vel * conf.POWERUP_SPAWN_RATE * n))
+        self.powerup_group = 0
         self.accel = conf.LEVEL_ACCEL
         self.scores = [0] * self.num_cars
         self.frames = 0
@@ -360,7 +361,14 @@ class Level:
             self.next_p_spawn -= 1
             if self.next_p_spawn <= 0:
                 n = self.num_cars if self.num_cars > 0 else 2
-                self.next_p_spawn = ir(conf.FPS * triangular() / (-self.vel * conf.POWERUP_SPAWN_RATE * n))
+                t = ir(conf.FPS * triangular() / (-self.vel * conf.POWERUP_SPAWN_RATE * n))
+                if not self.powerup_group:
+                    if r() < conf.POWERUP_GROUP_RATE:
+                        self.powerup_group = randint(1, conf.POWERUP_GROUP_SIZE - 1)
+                if self.powerup_group:
+                    self.powerup_group -= 1
+                    t /= conf.POWERUP_GROUP_SPAWN_RATE_MULTIPLIER
+                self.next_p_spawn = t
                 # choose obj type
                 l = list(conf.POWERUP_WEIGHTINGS)
                 if not conf.CAR_HEALTH_ON:

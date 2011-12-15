@@ -2,8 +2,6 @@ import os
 
 import pygame as pg
 
-# TODO: adjust powerup frequency, durations, weightings, images, multipliers
-
 DATA_DIR = ''
 IMG_DIR = DATA_DIR + 'img' + os.sep
 SOUND_DIR = DATA_DIR + 'sound' + os.sep
@@ -13,12 +11,14 @@ FONT_DIR = DATA_DIR + 'font' + os.sep
 
 WINDOW_ICON = IMG_DIR + 'icon.png'
 WINDOW_TITLE = 'Spaaace'
+MOUSE_VISIBLE = False
 RESIZABLE = True
 FULLSCREEN = False
 FLAGS = pg.DOUBLEBUF
 SCALE = .75
 SIZE = (1400, 700)
 RES_W = (int(round(SIZE[0] * SCALE)), int(round(SIZE[1] * SCALE)))
+MIN_RES_W = (320, 160)
 RES_F = pg.display.list_modes()[0]
 FPS = 60
 FRAME = 1. / FPS
@@ -84,6 +84,9 @@ TARGET_SCORE = 10
 BG_SPEED = 1 # ratio of FG speed
 SPAWN_RATE = .0004
 POWERUP_SPAWN_RATE = .00003
+POWERUP_GROUP_RATE = .1
+POWERUP_GROUP_SPAWN_RATE_MULTIPLIER = 20
+POWERUP_GROUP_SIZE = 10
 LEVEL_ACCEL = .5
 
 CAR_MASS = 50.
