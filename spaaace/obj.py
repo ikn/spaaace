@@ -134,7 +134,7 @@ class Obj (ObjBase):
 class Car (ObjBase):
     def __init__ (self, level, ID):
         self.ID = ID
-        self.colour = conf.CAR_COLOURS_LIGHT[self.ID]
+        self.colours = conf.ALL_CAR_COLOURS[self.ID]
         pts = conf.OBJ_SHAPES['car']
         self.mass = conf.CAR_MASS
         y = (conf.SIZE[1] / (level.num_cars + 1)) * (ID + 1)
@@ -289,13 +289,22 @@ class Car (ObjBase):
         return False
 
     def draw (self, screen):
+        ps = self.powerups
         if conf.GRAPHICS <= conf.NO_IMAGE_THRESHOLD or not self.imgs:
             pts = [x * conf.SCALE for x in self.shape.get_points()]
-            pg.draw.polygon(screen, self.colour, pts)
+            pg.draw.polygon(screen, self.colours[self.current_img], pts)
+            # powerups
+            if ps:
+                w = max(int(round(conf.SCALE * conf.POWERUP_BORDER_WIDTH)), 1)
+                pos = self.body.position * conf.SCALE
+                for p in ps:
+                    # grow polygon
+                    grow = 1 + (conf.POWERUP_BORDER_OFFSET[p] + float(w) / 2) / 30
+                    new_pts = [(x - pos) * grow + pos for x in pts]
+                    pg.draw.polygon(screen, conf.POWERUP_COLOURS_LIGHT[p], new_pts, w)
         else:
             if self.level.dirty:
                 self.gen_imgs()
-            ps = self.powerups
             self._draw_imgs(screen, ('main', self.imgs[self.current_img]),
                             *((p, img) for p, img in self.p_imgs.iteritems() if p in ps))
 
