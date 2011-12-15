@@ -208,7 +208,8 @@ class Car (ObjBase):
 
     def powerup (self, p):
         ID = p.ID
-        self.level.game.play_snd('powerup')
+        if ID != 'bomb':
+            self.level.game.play_snd('powerup')
         if ID in self.powerups:
             self.powerups[ID] += conf.POWERUP_TIME[ID]
         else:
