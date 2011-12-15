@@ -6,9 +6,6 @@ import pymunk as pm
 
 import conf
 
-# TODO:
-# - depiction of having powerups (car-invincible.png, car-heavy.png, car-fast.png)
-
 class ObjBase:
     def __init__ (self, level, ID, pos, angle, v, ang_vel, pts, elast,
                   friction, *img_IDs):
@@ -34,24 +31,75 @@ class ObjBase:
         self.gen_imgs()
 
     def gen_imgs (self):
+        img = self.level.game.img
+        self.imgs = imgs = []
+        for img_ID in self.img_IDs:
+            try:
+                imgs.append(img(img_ID + '.png', conf.SCALE))
+            except pg.error:
+                pass
         try:
-            self.imgs = imgs = []
-            for img_ID in self.img_IDs:
-                imgs.append(self.level.game.img(img_ID + '.png', conf.SCALE))
             w, h = imgs[0].get_size()
+        except IndexError:
+            pass
+        else:
             self.centre = imgs[0].get_rect().center
             self.offset = [-w / 2, -h / 2]
-        except pg.error:
-            self.imgs = []
-        self._last_angle = None
+            self._last_angle = None
+            self._img_cache = {}
+            self._offset_cache = None
 
     def set_img (self, i):
         self.current_img = i
-        try:
-            if self._last_angle_data is not None:
-                self._last_angle_data[0] = None
-        except AttributeError:
-            pass
+        self._img_cache['main'] = None
+        self._offset_cache = None
+
+    def _draw_imgs (self, screen, *data):
+        angle = self.body.angle
+        last = self._last_angle
+        p = pm.Vec2d(self.body.position)
+        g = conf.GRAPHICS
+        max_t = conf.MAX_ROTATE_THRESHOLD
+        if g == 0:
+            threshold = max_t
+        else:
+            threshold = min(conf.ROTATE_THRESHOLD / g ** conf.ROTATE_THRESHOLD_POWER, max_t)
+        angle = threshold * int(round(angle / threshold))
+        # get images
+        imgs = []
+        cache = self._img_cache
+        for ID, src in data:
+            # retrieve
+            img = cache.get(ID, None)
+            if last != angle or img is None:
+                # generate rotated image
+                if conf.GRAPHICS <= conf.UNFILTERED_ROTATE_THRESHOLD:
+                    img = pg.transform.rotate(src, -180 * angle / pi)
+                else:
+                    img = pg.transform.rotozoom(src, -180 * angle / pi, 1)
+                if img.get_alpha() is None and img.get_colorkey() is None:
+                    img = img.convert()
+                else:
+                    img = img.convert_alpha()
+                self._img_cache[ID] = img
+            imgs.append(img)
+        # retrieve offset
+        o = self._offset_cache
+        if last != angle or o is None:
+            # compute offset
+            o = pm.Vec2d(self.offset)
+            rect = imgs[0].get_rect()
+            new_c = rect.center
+            o += self.centre
+            o -= new_c
+            self._offset_cache = o
+        if last != angle:
+            # store angle
+            self._last_angle = angle
+        p *= conf.SCALE
+        p += o
+        for img in imgs:
+            screen.blit(img, p)
 
     def draw (self, screen):
         if conf.GRAPHICS <= conf.NO_IMAGE_THRESHOLD or not self.imgs:
@@ -60,47 +108,7 @@ class ObjBase:
         else:
             if self.level.dirty:
                 self.gen_imgs()
-            angle = self.body.angle
-            last = self._last_angle
-            p = pm.Vec2d(self.body.position)
-            g = conf.GRAPHICS
-            max_t = conf.MAX_ROTATE_THRESHOLD
-            if g == 0:
-                threshold = max_t
-            else:
-                threshold = min(conf.ROTATE_THRESHOLD / g ** conf.ROTATE_THRESHOLD_POWER, max_t)
-            angle = threshold * int(round(angle / threshold))
-            if last == angle:
-                # retrieve
-                img, o = self._last_angle_data
-            else:
-                img = None
-                o = None
-            if img is None:
-                img = self.imgs[self.current_img]
-                # rotate image
-                if conf.GRAPHICS <= conf.UNFILTERED_ROTATE_THRESHOLD:
-                    img = pg.transform.rotate(img, -180 * angle / pi)
-                else:
-                    img = pg.transform.rotozoom(img, -180 * angle / pi, 1)
-                if img.get_alpha() is None and img.get_colorkey() is None:
-                    img = img.convert()
-                else:
-                    img = img.convert_alpha()
-            if o is None:
-                # get offset
-                o = list(self.offset)
-                rect = img.get_rect()
-                new_c = rect.center
-                o[0] += self.centre[0] - new_c[0]
-                o[1] += self.centre[1] - new_c[1]
-            if last != angle:
-                # store
-                self._last_angle = angle
-                self._last_angle_data = [img, o]
-            p *= conf.SCALE
-            p += o
-            screen.blit(img, p)
+            self._draw_imgs(screen, ('main', self.imgs[self.current_img]))
 
 class Obj (ObjBase):
     def __init__ (self, level, ID, p, vx):
@@ -138,6 +146,16 @@ class Car (ObjBase):
         self.dying = False
         self.health = self.max_health = conf.CAR_HEALTH_BASE * conf.CAR_HEALTH_MULTIPLIER
         self.powerups = {}
+
+    def gen_imgs (self):
+        ObjBase.gen_imgs(self)
+        img = self.level.game.img
+        self.p_imgs = imgs = {}
+        for p in conf.POWERUPS:
+            try:
+                imgs[p] = img('car-{0}.png'.format(p), conf.SCALE)
+            except pg.error:
+                pass
 
     def spawn (self):
         y = (conf.SIZE[1] / (self.level.num_cars + 1)) * (self.ID + 1)
@@ -269,6 +287,17 @@ class Car (ObjBase):
             f.append(fi)
         self.body.apply_impulse(f, conf.CAR_FORCE_OFFSET)
         return False
+
+    def draw (self, screen):
+        if conf.GRAPHICS <= conf.NO_IMAGE_THRESHOLD or not self.imgs:
+            pts = [x * conf.SCALE for x in self.shape.get_points()]
+            pg.draw.polygon(screen, self.colour, pts)
+        else:
+            if self.level.dirty:
+                self.gen_imgs()
+            ps = self.powerups
+            self._draw_imgs(screen, ('main', self.imgs[self.current_img]),
+                            *((p, img) for p, img in self.p_imgs.iteritems() if p in ps))
 
 class Powerup:
     def __init__ (self, level, ID, p, vx):
