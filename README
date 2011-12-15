@@ -80,11 +80,12 @@ WASD and IJKL work for the Dvorak keyboard layout too (,AOE and CHTN).
 
 Source code is available under the new BSD license (included).
 
-Images are available under the Creative Commons CC0 license:
+Images and 'powerup' and 'powerdown' sounds are available under the Creative
+Commons CC0 license:
     https://creativecommons.org/publicdomain/zero/1.0/
 
-All audio files are available under Creative Commons licenses.  Sounds are from
-Freesound and are by:
+All other audio files are available under Creative Commons licenses.  Other
+sounds are from Freesound and are by:
 
 inferno <http://www.freesound.org/people/inferno/>
 Michael Manzke <http://www.freesound.org/people/m_O_m/>
