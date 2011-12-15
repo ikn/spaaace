@@ -27,7 +27,7 @@ def begin_col_cb (space, arbiter, level):
     if any(powerups):
         i = powerups.index(True)
         p = powerup_shapes[shapes[i]]
-        level.car_shapes[shapes[not i]].powerup(p.ID)
+        level.car_shapes[shapes[not i]].powerup(p)
         p.die()
         return False
     else:
@@ -219,9 +219,8 @@ class Level:
                 if o in exclude:
                     continue
                 p2 = o.body.position
-                assert p1 != p2
                 r = p2 - p1
-                r_sq = r.get_length_sqrd()
+                r_sq = max(r.get_length_sqrd(), 10 ** -10)
                 o.body.apply_impulse((f * o.mass / r_sq) * r.normalized())
 
     def menu_move (self, d = None, axis = None, sign = None):

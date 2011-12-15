@@ -209,23 +209,27 @@ class Car (ObjBase):
         self.update_img()
 
     def powerup (self, p):
+        ID = p.ID
         self.level.game.play_snd('powerup')
-        if p in self.powerups:
-            self.powerups[p] += conf.POWERUP_TIME[p]
+        if ID in self.powerups:
+            self.powerups[ID] += conf.POWERUP_TIME[ID]
         else:
-            if p != 'health':
-                self.powerups[p] = conf.POWERUP_TIME[p]
+            if ID not in ('health', 'bomb'):
+                self.powerups[ID] = conf.POWERUP_TIME[ID]
             # add effects
-            if p == 'invincible':
+            if ID == 'invincible':
                 self.invincible = True
-            elif p == 'heavy':
+            elif ID == 'heavy':
                 self.mass *= conf.HEAVY_MULTIPLIER
                 self.body.mass = self.mass
                 self.force_multiplier = conf.HEAVY_MULTIPLIER
-            elif p == 'fast':
+            elif ID == 'fast':
                 self.power_multiplier = conf.FAST_MULTIPLIER
-            elif p == 'health':
+            elif ID == 'health':
                 self.heal(conf.HEALTH_INCREASE * self.max_health)
+            elif ID == 'bomb':
+                self.level.game.play_snd('explode', 1.5)
+                self.level.explosion_force((conf.BOMB_FORCE, p.body.position), exclude = (self, p))
 
     def end_powerup (self, p):
         self.level.game.play_snd('powerdown')
@@ -244,7 +248,7 @@ class Car (ObjBase):
         p = self.body.position
         force = conf.CAR_EXPLOSION_FORCE
         amount = conf.GRAPHICS * conf.DEATH_PARTICLES * conf.SCALE
-        l.explosion_force((force, p), exclude = [self])
+        l.explosion_force((force, p), exclude = (self,))
         l.spawn_particles(p * conf.SCALE,
             (conf.CAR_COLOURS[self.ID], amount),
             (conf.CAR_COLOURS_LIGHT[self.ID], amount)
@@ -336,7 +340,8 @@ class Powerup:
 
     def die (self):
         p = self.body.position
-        amount = conf.GRAPHICS * conf.POWERUP_PARTICLES * conf.SCALE
+        ptcls = conf.BOMB_PARTICLES if self.ID == 'bomb' else conf.POWERUP_PARTICLES
+        amount = conf.GRAPHICS * ptcls * conf.SCALE
         self.level.spawn_particles(p * conf.SCALE,
             (conf.POWERUP_COLOURS[self.ID], amount),
             (conf.POWERUP_COLOURS_LIGHT[self.ID], amount)

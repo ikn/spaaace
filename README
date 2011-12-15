@@ -20,9 +20,21 @@ Pygame (1.8 or later, probably; tested with 1.9.1)
 
     PLAYING
 
-The aim of the game is to push opponents into the boundary to increase your
-score; the first to 10 wins.  In 1-player mode, just try to last as long as you
-can.
+The aim of the game is to push opponents into rocks or the boundary to get them
+to blow up.  Crashing into rocks causes an amount of damage dependent on the
+force of the impact, while crossing the boundary results in instant death;
+crashing into opponents doesn't cause any damage.
+
+The remaining player after all others have died gets a point; the first to 10
+wins.  In 1-player mode, just try to last as long as you can.
+
+The coloured spheres are powerups, with the following effects:
+ - blue: temporary immunity to crash damage.
+ - red: temporary mass increase - this makes it easier to push stuff, but
+        increases the force of (and so damage taken in) crashes, so be careful
+ - green: temporary speed increase.
+ - white: restore up to 50% health.
+ - orange: explodes, pushing away everyone but the player that collects it.
 
 The 'graphics' control on the title screen affects the FPS, the amount of
 particles, image rotation smoothness, whether images are used, and the number
