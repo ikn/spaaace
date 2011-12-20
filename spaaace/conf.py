@@ -44,7 +44,7 @@ KEYS_MOVE = (
 KEYS_MINIMISE = (pg.K_F10,)
 KEYS_FULLSCREEN = (pg.K_F11, (pg.K_RETURN, pg.KMOD_ALT, True),
                    (pg.K_KP_ENTER, pg.KMOD_ALT, True))
-KEYS_NEXT = (pg.K_RETURN, pg.K_SPACE, pg.K_KP_ENTER)
+KEYS_NEXT = ((pg.K_RETURN, 0, True), pg.K_SPACE, (pg.K_KP_ENTER, 0, True))
 KEYS_BACK = (pg.K_ESCAPE, pg.K_BACKSPACE)
 JOY_START_MOVE = .6
 JOY_STOP_MOVE = .4
