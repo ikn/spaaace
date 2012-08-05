@@ -306,8 +306,6 @@ class Car (ObjBase):
                     new_pts = [(x - pos) * grow + pos for x in pts]
                     pg.draw.polygon(screen, conf.POWERUP_COLOURS_LIGHT[p], new_pts, w)
         else:
-            if self.level.dirty:
-                self.gen_imgs()
             self._draw_imgs(screen, ('main', self.imgs[self.current_img]),
                             *((p, img) for p, img in self.p_imgs.iteritems() if p in ps))
 

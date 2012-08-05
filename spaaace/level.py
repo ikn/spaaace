@@ -379,6 +379,7 @@ class Level:
                 l = list(conf.POWERUP_WEIGHTINGS)
                 if not conf.CAR_HEALTH_ON:
                     l[conf.POWERUPS.index('invincible')] = 0
+                    l[conf.POWERUPS.index('health')] = 0
                 cumulative = []
                 last = 0
                 for x in l:
@@ -444,6 +445,8 @@ class Level:
         if self.won is None:
             if n < self.num_cars:
                 if n < 1:
+                    if self.num_cars == 1:
+                        self.vel = conf.INITIAL_VEL
                     self.reset()
                 elif n == 1:
                     winner = self.cars[0]
@@ -521,6 +524,9 @@ class Level:
             p[1] += size + dy
 
     def draw (self, screen):
+        if self.dirty:
+            for c in self.all_cars:
+                c.gen_imgs()
         if self.paused and not self.particles:
             if self.dirty:
                 self._drawn_once = False
